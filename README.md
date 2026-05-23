@@ -3,7 +3,7 @@
 > **Vibe Coding Experiment** — This project is a pure AI/Agent playground.  
 > **No human-written code is allowed.** Every line is authored by an AI agent (vibe coding / agent-driven development).
 > 
-> Repository: [github.com/0xA672/easyedit](https://github.com/0xA672/easyedit)
+> Repository: [github.com/0xA672/easyedit](https://github.com/0xA672/Easyedit)
 
 ## Project structure
 ```
