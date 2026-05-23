@@ -37,15 +37,15 @@ type Range struct {
 type CmdKind int
 
 const (
-	CmdNone CmdKind = iota
-	CmdDelete     // d - delete lines
-	CmdSubstitute // s - substitute
-	CmdWrite      // w - write
-	CmdQuit       // q - quit
-	CmdWriteQuit  // wq - write and quit
-	CmdForceQuit  // q! - force quit
-	CmdEdit       // e - edit file
-	CmdSet        // set - set option
+	CmdNone       CmdKind = iota
+	CmdDelete             // d - delete lines
+	CmdSubstitute         // s - substitute
+	CmdWrite              // w - write
+	CmdQuit               // q - quit
+	CmdWriteQuit          // wq - write and quit
+	CmdForceQuit          // q! - force quit
+	CmdEdit               // e - edit file
+	CmdSet                // set - set option
 )
 
 // SetOption stores a set command option.
@@ -393,14 +393,14 @@ func (c *Command) MakeGlobal() bool {
 // To avoid circular dependency (command depending on document),
 // Executor uses callback functions for operations.
 type Executor struct {
-	DeleteRange func(startLine, endLine int) (string, error)
-	GetLineText func(line int) string
-	SetOption   func(name, value string) error
-	OpenFile    func(path string) error
-	WriteFile   func(path string) error
-	Quit        func(force bool) error
-	ShowMsg     func(msg string)
-	ReplaceText func(oldPattern, newText string, startLine, endLine int, global, ignoreCase bool) (int, error)
+	DeleteRange  func(startLine, endLine int) (string, error)
+	GetLineText  func(line int) string
+	SetOption    func(name, value string) error
+	OpenFile     func(path string) error
+	WriteFile    func(path string) error
+	Quit         func(force bool) error
+	ShowMsg      func(msg string)
+	ReplaceText  func(oldPattern, newText string, startLine, endLine int, global, ignoreCase bool) (int, error)
 	GetLineCount func() int
 }
 

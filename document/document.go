@@ -3,7 +3,9 @@
 // Design:
 // Gap Buffer is one of the classic in-memory structures for text editors.
 // It splits the buffer into three parts:
-//   [left half] [gap] [right half]
+//
+//	[left half] [gap] [right half]
+//
 // The cursor position corresponds to the gap start. Inserting at the cursor
 // writes characters into the gap and advances the gap pointer without moving
 // large amounts of data. Deleting simply expands the gap.

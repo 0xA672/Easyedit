@@ -34,10 +34,10 @@ import (
 type Mode int
 
 const (
-	ModeInsert Mode = iota // Insert mode
-	ModeCommand            // Command mode
-	ModeSearch             // Search mode
-	ModeReplace            // Replace mode
+	ModeInsert  Mode = iota // Insert mode
+	ModeCommand             // Command mode
+	ModeSearch              // Search mode
+	ModeReplace             // Replace mode
 )
 
 // Editor is the core editor struct holding all state.
@@ -63,17 +63,17 @@ type Editor struct {
 	mode Mode
 
 	// Selection
-	selStart int  // Selection start position (-1 means no selection)
-	selEnd   int  // Selection end position
+	selStart  int  // Selection start position (-1 means no selection)
+	selEnd    int  // Selection end position
 	selecting bool // Whether currently selecting
 
 	// Search
 	searchQuery   string
-	searchRegex   bool    // Enable regex
-	searchCase    bool    // Enable case sensitivity
-	searchResults []int   // Match positions
-	searchIdx     int     // Current match index
-	searchDir     int     // Search direction: 1 forward, -1 backward
+	searchRegex   bool  // Enable regex
+	searchCase    bool  // Enable case sensitivity
+	searchResults []int // Match positions
+	searchIdx     int   // Current match index
+	searchDir     int   // Search direction: 1 forward, -1 backward
 
 	// Command bar
 	cmdBuffer   string // Command/search input buffer
@@ -92,9 +92,9 @@ type Editor struct {
 	replaceFlag string
 
 	// Syntax highlight cache (avoid re-tokenization every frame)
-	lastContent string           // Text from last render
-	hlTokens    []chroma.Token   // Cached tokenization result
-	runeColors  []tcell.Color    // Foreground color per rune position (0=default)
+	lastContent string         // Text from last render
+	hlTokens    []chroma.Token // Cached tokenization result
+	runeColors  []tcell.Color  // Foreground color per rune position (0=default)
 }
 
 // Token type alias for convenience.

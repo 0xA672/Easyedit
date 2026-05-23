@@ -130,7 +130,7 @@ func TestDeleteAll(t *testing.T) {
 func TestInsertAfterDelete(t *testing.T) {
 	// Gap position changes after delete, then insert
 	gb := NewGapBufferFromRunes([]rune("hello"))
-	gb.Delete(1, 3) // "ho" (delete e,l,l)
+	gb.Delete(1, 3)           // "ho" (delete e,l,l)
 	gb.Insert(1, []rune("i")) // "hio"
 	gb.Insert(3, []rune("p")) // insert at end → "hiop"
 	if gb.Content() != "hiop" {
@@ -816,7 +816,7 @@ func TestLargeInsert(t *testing.T) {
 
 func TestContentAfterGapOperations(t *testing.T) {
 	gb := NewGapBufferFromRunes([]rune("hello world"))
-	gb.Delete(5, 6)       // delete " world"
+	gb.Delete(5, 6)            // delete " world"
 	gb.Insert(5, []rune("!!")) // insert "!!"
 	if gb.Content() != "hello!!" {
 		t.Fatalf("expected %q, got %q", "hello!!", gb.Content())

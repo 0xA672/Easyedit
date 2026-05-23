@@ -10,9 +10,9 @@ package document
 type UndoKind int
 
 const (
-	UndoInsert UndoKind = iota // Insert operation
-	UndoDelete                 // Delete operation
-	UndoReplace                // Replace operation
+	UndoInsert  UndoKind = iota // Insert operation
+	UndoDelete                  // Delete operation
+	UndoReplace                 // Replace operation
 )
 
 // Position represents a position in the document.
@@ -71,7 +71,7 @@ func (us *UndoStack) Push(kind UndoKind, pos int, text, deleted []rune) {
 	step := UndoStep{
 		Kind:    kind,
 		Pos:     pos,
-		Text:    append([]rune{}, text...),     // Deep copy
+		Text:    append([]rune{}, text...),    // Deep copy
 		Deleted: append([]rune{}, deleted...), // Deep copy
 	}
 
