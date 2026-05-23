@@ -1,0 +1,40 @@
+# EasyEdit 配置文件
+# Windows: %APPDATA%/easyedit/config.toml
+# Linux/macOS: ~/.easyedit.toml
+
+[theme]
+# 颜色值可以是 tcell 颜色名（red, green, blue, aqua, navy 等）或十六进制
+default_fg = "default"
+default_bg = "default"
+linenum_fg = "blue"
+linenum_bg = "default"
+statusbar_fg = "white"
+statusbar_bg = "blue"
+search_match_bg = "yellow"
+bracket_match = "green"
+selection_bg = "navy"
+
+[keys]
+# 键位绑定（暂不支持自定义，预留字段）
+save = "Ctrl+S"
+quit = "Ctrl+Q"
+find = "Ctrl+F"
+replace = "Ctrl+H"
+select_all = "Ctrl+A"
+undo = "Ctrl+Z"
+redo = "Ctrl+Y"
+cut = "Ctrl+X"
+copy = "Ctrl+C"
+paste = "Ctrl+V"
+toggle_wrap = "Alt+W"
+command_mode = ":"
+save_as = "Ctrl+Shift+S"
+
+# 编辑器选项
+tab_width = 4        # 缩进宽度
+show_line_num = true # 显示行号
+backup = true        # 保存时创建 .bak 备份
+soft_wrap = true     # 软换行
+auto_indent = true   # 自动缩进
+undo_limit = 100     # 撤销步数上限
+tab_to_spaces = true # Tab 转空格
