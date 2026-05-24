@@ -1113,6 +1113,15 @@ func (e *Editor) clampCursor() {
 		}
 	}
 	e.cursorCol = visCol
+
+	// Auto-scroll viewport to keep the cursor visible
+	visibleLines := e.termH - 1 // rows available for text (excl. status bar)
+	if e.cursorRow < e.offsetRow {
+		e.offsetRow = e.cursorRow
+	}
+	if e.offsetRow+visibleLines <= e.cursorRow {
+		e.offsetRow = e.cursorRow - visibleLines + 1
+	}
 }
 
 // lineNumWidth returns the width of the line number area.
