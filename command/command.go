@@ -46,6 +46,7 @@ const (
 	CmdForceQuit          // q! - force quit
 	CmdEdit               // e - edit file
 	CmdSet                // set - set option
+	CmdGoto               // goto line (e.g. :42)
 )
 
 // SetOption stores a set command option.
@@ -90,6 +91,10 @@ func Parse(input string) (*Command, error) {
 	cmd.Range, i = parseRange(input, i)
 
 	if i >= len(input) {
+		if cmd.Range.Start >= 0 {
+			cmd.Kind = CmdGoto
+			return cmd, nil
+		}
 		return nil, &ParseError{"incomplete command"}
 	}
 
@@ -402,6 +407,7 @@ type Executor struct {
 	ShowMsg      func(msg string)
 	ReplaceText  func(oldPattern, newText string, startLine, endLine int, global, ignoreCase bool) (int, error)
 	GetLineCount func() int
+	GotoLine     func(line int) error
 }
 
 // Execute executes the parsed command, returning whether the editor should quit.
@@ -572,6 +578,18 @@ func (ex *Executor) Execute(cmd *Command) (shouldQuit bool, err error) {
 		}
 		if ex.ShowMsg != nil {
 			ex.ShowMsg(fmt.Sprintf("opened %s", path))
+		}
+
+	case CmdGoto:
+		if ex.GotoLine == nil {
+			return false, &ParseError{"goto not supported"}
+		}
+		line := cmd.Range.Start
+		if line < 0 {
+			line = 0
+		}
+		if err := ex.GotoLine(line); err != nil {
+			return false, err
 		}
 
 	case CmdSet:

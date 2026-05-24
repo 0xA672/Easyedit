@@ -270,6 +270,59 @@ func (e *Editor) handleMouse(ev *tcell.EventMouse) {
 
 // ---- Insert Mode Event Handling ----
 
+// autoPair returns the matching closing character for brackets/quotes.
+// Returns false if the character doesn't need auto-pairing.
+func autoPair(ch rune) (rune, bool) {
+	switch ch {
+	case '(':
+		return ')', true
+	case '[':
+		return ']', true
+	case '{':
+		return '}', true
+	case '\'':
+		return '\'', true
+	case '"':
+		return '"', true
+	case '`':
+		return '`', true
+	}
+	return 0, false
+}
+
+func (e *Editor) doInsertAutoPair(open, close rune) {
+	// If there's a selection, wrap it
+	if e.selStart >= 0 && e.selStart != e.selEnd {
+		start, end := e.getSelectionRange()
+		selText := e.doc.Buffer.Slice(start, end)
+		// Delete selection
+		e.doc.DeleteRange(start, end-start)
+		e.undo.Push(document.UndoDelete, start, nil, selText)
+		// Wrap in brackets
+		wrapped := make([]rune, 0, len(selText)+2)
+		wrapped = append(wrapped, open)
+		wrapped = append(wrapped, selText...)
+		wrapped = append(wrapped, close)
+		e.doc.Buffer.Insert(start, wrapped)
+		e.doc.Modified = true
+		e.undo.Push(document.UndoInsert, start, wrapped, nil)
+		e.cursor = start + len(selText) + 1
+		e.selecting = false
+		e.selStart = -1
+		e.selEnd = -1
+		return
+	}
+
+	// Insert pair
+	e.doc.InsertRune(e.cursor, open)
+	e.undo.Push(document.UndoInsert, e.cursor, []rune{open}, nil)
+	e.cursor++
+
+	e.doc.InsertRune(e.cursor, close)
+	e.undo.Push(document.UndoInsert, e.cursor, []rune{close}, nil)
+	// Cursor stays between them
+}
+
 func (e *Editor) handleInsertMode(ev *tcell.EventKey) {
 	// Special shortcuts
 	switch {
@@ -286,7 +339,12 @@ func (e *Editor) handleInsertMode(ev *tcell.EventKey) {
 			e.showMsg("Soft wrap: OFF")
 		}
 	case ev.Key() == tcell.KeyRune:
-		e.doInsert(ev.Rune())
+		ch := ev.Rune()
+		if pair, ok := autoPair(ch); ok {
+			e.doInsertAutoPair(ch, pair)
+		} else {
+			e.doInsert(ch)
+		}
 	case ev.Key() == tcell.KeyEnter:
 		e.doNewLine()
 
@@ -867,6 +925,17 @@ func (e *Editor) executeCommand() {
 		},
 		ShowMsg: func(msg string) {
 			e.showMsg(msg)
+		},
+		GotoLine: func(line int) error {
+			if line >= e.doc.LineCount() {
+				line = e.doc.LineCount() - 1
+			}
+			if line < 0 {
+				line = 0
+			}
+			e.cursor = e.doc.LineColToPos(line, 0)
+			e.clampCursor()
+			return nil
 		},
 	}
 

@@ -33,6 +33,7 @@
 //	:3,5s/old/new    Replace in range
 //	:set nu    Show line numbers
 //	:set nonu  Hide line numbers
+//	:42        Jump to line 42
 //
 // Config file (auto-loaded):
 //
