@@ -66,34 +66,69 @@ foreach ($p in $platforms) {
   $parts = $p.Split("/")
   $goos = $parts[0]
   $goarch = $parts[1]
-  
+
+  # Determine binary extension (no version/platform in binary name)
   if ($goos -eq "windows") {
-    $ext = ".exe"
+    $binaryName = "easyedit.exe"
   } elseif ($goos -eq "js" -or $goos -eq "wasip1") {
-    $ext = ".wasm"
+    $binaryName = "easyedit.wasm"
   } else {
-    $ext = ""
+    $binaryName = "easyedit"
   }
-  
-  $binaryName = "easyedit-$version-$goos-$goarch$ext"
-  $outputPath = "$outputDir\$binaryName"
-  
+
+  # Archive name: easyedit-v{version}-{os}-{arch}.zip|tar.gz
+  if ($goos -eq "windows") {
+    $archiveName = "easyedit-$version-$goos-$goarch.zip"
+  } elseif ($goos -eq "js" -or $goos -eq "wasip1") {
+    # .wasm files are single artifacts, no archive needed
+    $archiveName = "easyedit-$version-$goos-$goarch.wasm"
+  } else {
+    $archiveName = "easyedit-$version-$goos-$goarch.tar.gz"
+  }
+
+  $outputPath = "$outputDir\$archiveName"
+  $tmpDir = "$outputDir\tmp-$goos-$goarch"
+
   Write-Host "Building $goos/$goarch ... " -NoNewline
   $env:GOOS = $goos
   $env:GOARCH = $goarch
   $env:CGO_ENABLED = 0
-  
-  $result = & go build -ldflags="-s -w" -o "$outputPath" 2>&1
+
+  # Create temp dir and build binary there with simple name
+  New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
+  $binPath = "$tmpDir\$binaryName"
+
+  $result = & go build -ldflags="-s -w" -o "$binPath" 2>&1
   if ($LASTEXITCODE -eq 0) {
-    $size = (Get-Item "$outputPath").Length
-    $sizeKB = [math]::Round($size / 1KB, 1)
-    Write-Host "OK ($sizeKB KB)" -ForegroundColor Green
-    $built += @{Path = $outputPath; Name = $binaryName}
+    # Package into archive
+    if ($goos -eq "js" -or $goos -eq "wasip1") {
+      # Just rename the file to the archive name (single .wasm artifact)
+      Move-Item -Path "$binPath" -Destination "$outputPath" -Force
+    } elseif ($goos -eq "windows") {
+      # ZIP
+      Compress-Archive -Path "$tmpDir\*" -DestinationPath "$outputPath" -Force
+    } else {
+      # tar.gz
+      tar -czf "$outputPath" -C "$tmpDir" "$binaryName" 2>$null
+    }
+
+    if (Test-Path "$outputPath") {
+      $size = (Get-Item "$outputPath").Length
+      $sizeKB = [math]::Round($size / 1KB, 1)
+      Write-Host "OK ($sizeKB KB)" -ForegroundColor Green
+      $built += @{Path = $outputPath; Name = $archiveName}
+    } else {
+      Write-Host "FAILED (packaging)" -ForegroundColor Red
+      $failed += $p
+    }
   } else {
     Write-Host "FAILED" -ForegroundColor Red
     Write-Host "  $result"
     $failed += $p
   }
+
+  # Cleanup temp dir
+  Remove-Item -Path $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host "`n=== Summary ==="
