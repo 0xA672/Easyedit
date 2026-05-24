@@ -95,7 +95,7 @@ func main() {
 }
 
 func printUsage() {
- fmt.Print(`EasyEdit — Hybrid terminal text editor
+ os.Stdout.WriteString(`EasyEdit — Hybrid terminal text editor
 
 Usage:
   easyedit [flags] [file]
