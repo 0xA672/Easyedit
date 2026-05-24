@@ -368,6 +368,7 @@ type Document struct {
 	Buffer   *GapBuffer // underlying gap buffer
 	FilePath string     // file path
 	Modified bool       // modified flag
+	Encoding CommonEncoding // detected file encoding
 }
 
 // NewDocument creates a new empty document.

@@ -161,14 +161,29 @@ func (e *Editor) OpenFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("cannot read %s: %w", path, err)
 	}
-	e.doc = document.NewDocumentFromString(string(data))
+
+	// Detect encoding and decode to UTF-8
+	text, enc, err := document.DecodeToUTF8(data)
+	if err != nil {
+		// Fallback: treat as raw bytes
+		text = string(data)
+		enc = document.EncLatin1
+	}
+
+	e.doc = document.NewDocumentFromString(text)
 	e.doc.FilePath = path
+	e.doc.Encoding = enc
 	e.undo = document.NewUndoStack(e.config.UndoLimit)
 	e.cursor = 0
 	e.offsetRow = 0
 	e.offsetCol = 0
 	e.hl.SetFile(path)
-	e.showMsg(fmt.Sprintf("opened %s (%d lines)", filepath.Base(path), e.doc.LineCount()))
+
+	encMsg := ""
+	if enc != document.EncUTF8 {
+		encMsg = fmt.Sprintf(" [%s]", enc)
+	}
+	e.showMsg(fmt.Sprintf("opened %s (%d lines%s)", filepath.Base(path), e.doc.LineCount(), encMsg))
 	return nil
 }
 
@@ -192,9 +207,19 @@ func (e *Editor) SaveFile(path string) error {
 		}
 	}
 
-	// Write file
+	// Write file (encode back to original encoding if not UTF-8)
 	content := e.doc.Content()
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	var data []byte
+	if e.doc.Encoding != document.EncUTF8 && e.doc.Encoding != document.EncUnknown {
+		var err error
+		data, err = document.EncodeFromUTF8(content, e.doc.Encoding)
+		if err != nil {
+			data = []byte(content) // fallback to raw UTF-8
+		}
+	} else {
+		data = []byte(content)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("cannot write %s: %w", path, err)
 	}
 
@@ -321,6 +346,7 @@ func (e *Editor) doInsertAutoPair(open, close rune) {
 	e.doc.InsertRune(e.cursor, close)
 	e.undo.Push(document.UndoInsert, e.cursor, []rune{close}, nil)
 	// Cursor stays between them
+	e.clampCursor()
 }
 
 func (e *Editor) handleInsertMode(ev *tcell.EventKey) {
