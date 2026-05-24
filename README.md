@@ -145,9 +145,10 @@ This is a **Vibe Coding experiment** — contributions must follow these rules:
 
 Every AI model that has contributed code or design to this project is listed here.
 
-| Model | Provider | Role |
-|-------|----------|------|
-| deepseek-v4-flash | DeepSeek | Core code, README, project setup |
-| Qwen3.5 | Alibaba | Code review and maintenance |
+| Model             | Provider  | Role           |
+|-------------------|-----------|----------------|
+| deepseek-v4-flash | DeepSeek  | Core code, README, project setup |
+| Qwen3.5           | Alibaba   | Code review and maintenance |
+| GPT-4.1     | OpenAI    | architecture design         |
 
 *> Add your model! Open a PR or tell the maintainers which agent authored your contribution.*
