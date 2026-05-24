@@ -136,5 +136,6 @@ Every AI model that has contributed code or design to this project is listed her
 | Model | Provider | Role |
 |-------|----------|------|
 | deepseek-v4-flash | DeepSeek | Core code, README, project setup |
+| Qwen3.5 | Alibaba | Code review and maintenance |
 
 *> Add your model! Open a PR or tell the maintainers which agent authored your contribution.*
