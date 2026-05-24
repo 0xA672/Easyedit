@@ -53,13 +53,25 @@ import (
  "flag"
  "fmt"
  "os"
+ "runtime/debug"
 
  "easyedit/ui"
 )
 
-// Version is set at build time via -ldflags "-X main.Version=x.y.z".
-// Default fallback for users who build without ldflags.
+// Version holds the editor version. Priority:
+//  1. runtime/debug.ReadBuildInfo() — picks up module tag from 'go install'
+//  2. -ldflags "-X main.Version=x.y.z" — injected at link time
+//  3. "0.2.0-dev" — hardcoded fallback
 var Version = "0.2.0-dev"
+
+func init() {
+ if info, ok := debug.ReadBuildInfo(); ok {
+  v := info.Main.Version
+  if v != "" && v != "(devel)" {
+   Version = v
+  }
+ }
+}
 
 func main() {
  showVersion := flag.Bool("version", false, "print version and exit")

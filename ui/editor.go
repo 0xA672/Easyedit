@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/chroma/v2"
-	"github.com/atotto/clipboard"
+	"easyedit/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 
