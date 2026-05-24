@@ -50,26 +50,77 @@
 package main
 
 import (
-	"fmt"
-	"os"
+ "flag"
+ "fmt"
+ "os"
 
-	"easyedit/ui"
+ "easyedit/ui"
 )
 
+// Version is set at build time via -ldflags "-X main.Version=x.y.z".
+// Default fallback for users who build without ldflags.
+var Version = "0.2.0-dev"
+
 func main() {
-	editor := ui.NewEditor()
+ showVersion := flag.Bool("version", false, "print version and exit")
+ showHelp := flag.Bool("help", false, "print this help message")
+ flag.Usage = printUsage
+ flag.Parse()
 
-	// If a command-line argument is provided, open that file
-	if len(os.Args) > 1 {
-		filePath := os.Args[1]
-		if err := editor.OpenFile(filePath); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-	}
+ if *showVersion {
+  fmt.Printf("EasyEdit %s\n", Version)
+  os.Exit(0)
+ }
 
-	if err := editor.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error: %v\n", err)
-		os.Exit(1)
-	}
+ if *showHelp {
+  printUsage()
+  os.Exit(0)
+ }
+
+ editor := ui.NewEditor()
+
+ // If a positional argument is provided, open that file
+ if args := flag.Args(); len(args) > 0 {
+  filePath := args[0]
+  if err := editor.OpenFile(filePath); err != nil {
+   fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+   os.Exit(1)
+  }
+ }
+
+ if err := editor.Run(); err != nil {
+  fmt.Fprintf(os.Stderr, "Fatal error: %v\n", err)
+  os.Exit(1)
+ }
+}
+
+func printUsage() {
+ fmt.Print(`EasyEdit — Hybrid terminal text editor
+
+Usage:
+  easyedit [flags] [file]
+
+Flags:
+  --help       Print this help message
+  --version    Print version and exit
+
+Examples:
+  easyedit              Open a blank file
+  easyedit main.go      Open main.go for editing
+
+Keybindings (inside the editor):
+  Ctrl+S    Save        Ctrl+Q    Quit
+  Ctrl+F    Search      Ctrl+H    Replace
+  Ctrl+Z    Undo        Ctrl+Y    Redo
+  Ctrl+X    Cut         Ctrl+C    Copy        Ctrl+V    Paste
+  Ctrl+A    Select All  Alt+W     Toggle soft wrap
+  :         Enter command mode
+
+Commands (: mode):
+  :q        Quit           :q!       Force quit
+  :w        Save           :w <path> Save as
+  :wq       Save & quit    :e <path> Open file
+  :42       Go to line 42  :set nu   Show line numbers
+  :%s/a/b/g Replace all    :10,20d   Delete lines 10-20
+`)
 }
