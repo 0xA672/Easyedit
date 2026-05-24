@@ -12,3 +12,6 @@ easyedit.exe
 # OS
 .DS_Store
 Thumbs.db
+wiki_tmp
+WIKI.md
+wiki.html
