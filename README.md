@@ -21,6 +21,16 @@
 
 ## Install
 
+### Go install (recommended)
+
+Requires Go 1.21+.
+
+```bash
+go install github.com/0xA672/easyedit@latest
+```
+
+This installs the `easyedit` binary to your `$GOPATH/bin` (or `$HOME/go/bin`). Make sure this directory is in your `PATH`.
+
 ### Build from source
 
 Requires Go 1.21+.
@@ -36,6 +46,8 @@ If you are on Windows, this produces `easyedit.exe`.
 ### Download prebuilt binary
 
 > Coming soon — releases page will host prebuilt binaries for Windows, Linux, and macOS.
+
+> **Note:** An `uninstall` command is currently being developed by a contributor.
 
 ## Usage
 
