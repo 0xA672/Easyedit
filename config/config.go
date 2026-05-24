@@ -94,8 +94,8 @@ func defaultConfig() Config {
 	}
 }
 
-// configPath returns the config file path, cross-platform.
-func configPath() string {
+// ConfigPath returns the config file path, cross-platform.
+func ConfigPath() string {
 	if runtime.GOOS == "windows" {
 		appData := os.Getenv("APPDATA")
 		if appData == "" {
@@ -110,7 +110,7 @@ func configPath() string {
 // LoadConfig loads the config file; returns default config if file does not exist.
 func LoadConfig() Config {
 	cfg := defaultConfig()
-	path := configPath()
+	path := ConfigPath()
 
 	data, err := os.ReadFile(path)
 	if err != nil {

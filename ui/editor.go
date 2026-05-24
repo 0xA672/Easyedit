@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -148,6 +149,46 @@ func (e *Editor) Quit(force bool) error {
 		e.showMsg("File has unsaved changes! Use :q! to force quit.")
 		return fmt.Errorf("unsaved changes")
 	}
+	e.running = false
+	return nil
+}
+
+// doUninstall removes the editor and all configuration, then quits.
+func (e *Editor) doUninstall() error {
+	// 1. Delete config directory (config file + any backup files)
+	cfgPath := config.ConfigPath()
+	if data, err := os.Stat(cfgPath); err == nil && !data.IsDir() {
+		os.Remove(cfgPath)
+		cfgDir := filepath.Dir(cfgPath)
+		os.Remove(cfgDir) // remove parent dir if empty
+	}
+
+	// 2. Schedule the executable for deletion
+	exePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("uninstall: cannot determine executable path: %w", err)
+	}
+
+	if runtime.GOOS == "windows" {
+		// Write a batch script that waits then deletes the exe and itself
+		batPath := filepath.Join(os.TempDir(), "easyedit_uninstall.bat")
+		batContent := []byte(fmt.Sprintf(`@echo off
+ping -n 3 127.0.0.1 > nul
+del /f /q "%s"
+del /f /q "%%~f0"
+`, exePath))
+		if err := os.WriteFile(batPath, batContent, 0644); err != nil {
+			return fmt.Errorf("uninstall: cannot create cleanup script: %w", err)
+		}
+		// Launch the batch script (hidden window)
+		os.StartProcess("cmd", []string{"/c", "start", "/b", batPath}, &os.ProcAttr{})
+	} else {
+		// Unix: use nohup + sleep + rm
+		script := fmt.Sprintf("(sleep 2 && rm -f '%s') &", exePath)
+		os.StartProcess("/bin/sh", []string{"sh", "-c", script}, &os.ProcAttr{})
+	}
+
+	e.showMsg("EasyEdit has been uninstalled. Goodbye!")
 	e.running = false
 	return nil
 }
@@ -962,6 +1003,9 @@ func (e *Editor) executeCommand() {
 			e.cursor = e.doc.LineColToPos(line, 0)
 			e.clampCursor()
 			return nil
+		},
+		Uninstall: func() error {
+			return e.doUninstall()
 		},
 	}
 

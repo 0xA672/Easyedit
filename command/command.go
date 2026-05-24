@@ -47,6 +47,7 @@ const (
 	CmdEdit               // e - edit file
 	CmdSet                // set - set option
 	CmdGoto               // goto line (e.g. :42)
+	CmdUninstall          // uninstall - remove editor and config
 )
 
 // SetOption stores a set command option.
@@ -238,6 +239,13 @@ func parseCmdName(rest string) (CmdKind, []string, string) {
 		}
 		// s command: keep the rest for parseSubstitute
 		return CmdSubstitute, nil, rest[1:]
+
+	// Multi-letter commands that start with letters already claimed above
+	case 'u':
+		if strings.ToLower(rest) == "uninstall" {
+			return CmdUninstall, nil, rest[9:]
+		}
+		return CmdNone, nil, rest
 	}
 
 	return CmdNone, nil, rest
@@ -376,6 +384,8 @@ func (c *Command) String() string {
 			sb.WriteString("=")
 			sb.WriteString(c.SetOpt.Value)
 		}
+	case CmdUninstall:
+		sb.WriteString("uninstall")
 	}
 	return sb.String()
 }
@@ -408,6 +418,7 @@ type Executor struct {
 	ReplaceText  func(oldPattern, newText string, startLine, endLine int, global, ignoreCase bool) (int, error)
 	GetLineCount func() int
 	GotoLine     func(line int) error
+	Uninstall    func() error
 }
 
 // Execute executes the parsed command, returning whether the editor should quit.
@@ -591,6 +602,15 @@ func (ex *Executor) Execute(cmd *Command) (shouldQuit bool, err error) {
 		if err := ex.GotoLine(line); err != nil {
 			return false, err
 		}
+
+	case CmdUninstall:
+		if ex.Uninstall == nil {
+			return false, &ParseError{"uninstall not supported"}
+		}
+		if err := ex.Uninstall(); err != nil {
+			return false, err
+		}
+		return true, nil // quit after uninstall
 
 	case CmdSet:
 		if ex.SetOption == nil {
