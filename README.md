@@ -47,7 +47,6 @@ If you are on Windows, this produces `easyedit.exe`.
 
 > Coming soon — releases page will host prebuilt binaries for Windows, Linux, and macOS.
 
-> **Note:** An `uninstall` command is currently being developed by a contributor.
 
 ## Usage
 
@@ -93,6 +92,7 @@ easyedit file1 file2    # Open multiple files (tab navigation, if implemented)
 | `:set nonu` | Hide line numbers |
 | `:set nowrap` | Disable soft wrap |
 | `:set wrap` | Enable soft wrap |
+| `:uninstall` | Remove config and delete the editor binary |
 
 ## Configuration
 
