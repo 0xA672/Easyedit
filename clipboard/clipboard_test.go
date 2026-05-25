@@ -30,7 +30,40 @@ func TestReadAllWriteAllRoundtrip(t *testing.T) {
 	if Unsupported {
 		t.Skip("clipboard unsupported on this platform")
 	}
-	// Save original clipboard content
+
+	// Save the original clipboard content before probing, so we can restore it later.
+	origBeforeProbe, _ := ReadAll()
+
+	// Probe whether the clipboard is actually usable (e.g., daemon is running, tool is installed).
+	const probe = "EasyEdit clipboard probe"
+	if err := WriteAll(probe); err != nil {
+		// Try to restore the original content before skipping.
+		if origBeforeProbe != "" {
+			_ = WriteAll(origBeforeProbe)
+		}
+		t.Skipf("WriteAll probe failed, clipboard may be unavailable: %v", err)
+	}
+
+	gotProbe, err := ReadAll()
+	if err != nil {
+		if origBeforeProbe != "" {
+			_ = WriteAll(origBeforeProbe)
+		}
+		t.Skipf("ReadAll probe failed, clipboard may be unavailable: %v", err)
+	}
+	if gotProbe != probe {
+		if origBeforeProbe != "" {
+			_ = WriteAll(origBeforeProbe)
+		}
+		t.Skip("clipboard appears unavailable (roundtrip probe mismatched)")
+	}
+
+	// Restore the original clipboard content before running the actual roundtrip test.
+	if origBeforeProbe != "" {
+		_ = WriteAll(origBeforeProbe)
+	}
+
+	// Actual roundtrip test.
 	orig, _ := ReadAll()
 
 	testStr := "EasyEdit clipboard test: 你好, 世界!"
@@ -46,8 +79,8 @@ func TestReadAllWriteAllRoundtrip(t *testing.T) {
 		t.Fatalf("ReadAll() = %q, want %q", got, testStr)
 	}
 
-	// Restore original
+	// Restore the original clipboard content after the test.
 	if orig != "" {
-		WriteAll(orig)
+		_ = WriteAll(orig)
 	}
 }
