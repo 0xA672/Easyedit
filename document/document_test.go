@@ -553,7 +553,113 @@ func TestDocumentDeleteRuneAtOutOfRange(t *testing.T) {
 	}
 }
 
-// ==================== Undo/Redo ====================
+// ==================== Document Wrapper Additional Tests ====================
+
+func TestDocument_String(t *testing.T) {
+	d := NewDocumentFromString("hello world")
+	got := d.Buffer.String()
+	if got != "hello world" {
+		t.Fatalf("String() = %q, want %q", got, "hello world")
+	}
+}
+
+func TestDocument_Line(t *testing.T) {
+	d := NewDocumentFromString("line1\nline2\nline3")
+	tests := []struct {
+		line int
+		want string
+	}{
+		{0, "line1"},
+		{1, "line2"},
+		{2, "line3"},
+		{5, ""}, // out of range
+	}
+	for _, tt := range tests {
+		got := d.Line(tt.line)
+		if got != tt.want {
+			t.Errorf("Line(%d) = %q, want %q", tt.line, got, tt.want)
+		}
+	}
+}
+
+func TestDocument_LineLen(t *testing.T) {
+	d := NewDocumentFromString("abc\ndefg\nhi")
+	tests := []struct {
+		line int
+		want int
+	}{
+		{0, 3},
+		{1, 4},
+		{2, 2},
+		{5, 0}, // out of range
+	}
+	for _, tt := range tests {
+		got := d.LineLen(tt.line)
+		if got != tt.want {
+			t.Errorf("LineLen(%d) = %d, want %d", tt.line, got, tt.want)
+		}
+	}
+}
+
+func TestDocument_GetIndent(t *testing.T) {
+	d := NewDocumentFromString("    indented\n\ttabbed\nnoindent")
+	tests := []struct {
+		line int
+		want string
+	}{
+		{0, "    "},
+		{1, "\t"},
+		{2, ""},
+	}
+	for _, tt := range tests {
+		got := d.GetIndent(tt.line)
+		if got != tt.want {
+			t.Errorf("GetIndent(%d) = %q, want %q", tt.line, got, tt.want)
+		}
+	}
+}
+
+func TestDocument_PosToLineCol(t *testing.T) {
+	d := NewDocumentFromString("ab\ncd\nef")
+	// Content: "ab\ncd\nef" (positions: a=0, b=1, \n=2, c=3, d=4, \n=5, e=6, f=7)
+	tests := []struct {
+		pos     int
+		wantL   int
+		wantCol int
+	}{
+		{0, 0, 0}, // 'a'
+		{1, 0, 1}, // 'b'
+		{3, 1, 0}, // 'c'
+		{6, 2, 0}, // 'e'
+	}
+	for _, tt := range tests {
+		l, col := d.PosToLineCol(tt.pos)
+		if l != tt.wantL || col != tt.wantCol {
+			t.Errorf("PosToLineCol(%d) = (%d,%d), want (%d,%d)", tt.pos, l, col, tt.wantL, tt.wantCol)
+		}
+	}
+}
+
+func TestDocument_LineColToPos(t *testing.T) {
+	d := NewDocumentFromString("ab\ncd\nef")
+	// Content: "ab\ncd\nef" (line 0: ab, line 1: cd, line 2: ef)
+	tests := []struct {
+		line int
+		col  int
+		want int
+	}{
+		{0, 0, 0}, // 'a'
+		{0, 1, 1}, // 'b'
+		{1, 0, 3}, // 'c'
+		{2, 1, 7}, // 'f'
+	}
+	for _, tt := range tests {
+		got := d.LineColToPos(tt.line, tt.col)
+		if got != tt.want {
+			t.Errorf("LineColToPos(%d,%d) = %d, want %d", tt.line, tt.col, got, tt.want)
+		}
+	}
+}
 
 func TestNewUndoStack(t *testing.T) {
 	us := NewUndoStack(50)
