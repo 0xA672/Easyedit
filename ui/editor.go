@@ -20,15 +20,15 @@ import (
 	"strings"
 	"time"
 
-	"easyedit/clipboard"
+	"github.com/0xA672/Easyedit/clipboard"
 	"github.com/alecthomas/chroma/v2"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 
-	"easyedit/command"
-	"easyedit/config"
-	"easyedit/document"
-	"easyedit/highlight"
+	"github.com/0xA672/Easyedit/command"
+	"github.com/0xA672/Easyedit/config"
+	"github.com/0xA672/Easyedit/document"
+	"github.com/0xA672/Easyedit/highlight"
 )
 
 // Mode represents the editor mode.
