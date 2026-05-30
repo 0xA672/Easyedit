@@ -1,48 +1,45 @@
 ```
-# Go-specific ignores
+# Coverage reports
+coverage.out
+
+# Compiled and binary files
+*.pyc
+*.class
 *.o
-*.a
-*.out
-*.test
-*.prof
-*.syso
-
-# Dependencies
-vendor/
-
-# Build artifacts
-bin/
-pkg/
 *.exe
 *.dll
 *.so
+*.a
+*.obj
+*.out
 
-# Environment
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+dist/
+build/
+target/
+.gradle/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Environment files
 .env
 .env.local
-.env.*
+*.env.*
 
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Logs
-*.log
-
-# Coverage
-.coverage
-coverage/
-htmlcov/
-
-# Temporary files
-*.tmp
+# System files
 .DS_Store
 Thumbs.db
-
-# Cache directories
-__pycache__/
-.mypy_cache/
-.pytest_cache/
 ```
