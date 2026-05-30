@@ -51,12 +51,13 @@ package main
 
 import (
 	"bufio"
-	"easyedit/ui"
 	"flag"
 	"fmt"
 	"os"
 	"runtime/debug"
 	"strings"
+
+	"github.com/0xA672/Easyedit/ui"
 )
 
 // Version holds the editor version. Priority:
