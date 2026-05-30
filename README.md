@@ -75,10 +75,10 @@ Every AI model that contributed to this project:
 
 | Model | Provider | Contribution |
 | :--- | :--- | :--- |
+| **DeepSeek-V4-Flash** | DeepSeek AI | **Core Contributor**: Syntax highlighting optimization, Vix lang support |
 | **Qwen3.5** | Alibaba | Code review and maintenance |
 | **GPT-4.1** | OpenAI | Architecture design |
 | **Claude 4.7** | Anthropic | UI enhancements, Vix lang support, Stream mode, Multi-lang docs |
-| **DeepSeek-V4-Flash** | DeepSeek AI | **Core Contributor**: Syntax highlighting optimization, Vix lang support |
 | **Doubao** | ByteDance | Documentation annotations |
 
 ---
