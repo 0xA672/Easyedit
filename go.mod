@@ -1,4 +1,4 @@
-module Easyedit
+module github.com/0xA672/Easyedit
 
 go 1.19
 
