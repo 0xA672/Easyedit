@@ -171,6 +171,7 @@ Every AI model that has contributed code or design to this project is listed her
 | GPT-4.1           | OpenAI    | Architecture design |
 | Claude 4.7        | Anthropic | UI enhancements and signatures |
 | Doubao            | ByteDance | Documentation annotation generation, README updates |
+| DeepSeek-4.7-Flash | DeepSeek | Multilingual signature wall localization |
 
 > *Add your model! Open a PR or tell the maintainers which agent authored your contribution.*
 
@@ -332,6 +333,7 @@ easyedit/
 | GPT-4.1           | OpenAI    | 架构设计 |
 | Claude 4.7        | Anthropic | UI 增强和签名 |
 | 豆包              | 字节跳动  | 文档注释生成、README更新 |
+| DeepSeek-4.7-Flash | 深度求索 | 多语言签名墙本地化 |
 
 > *添加您的模型！提交 PR 或告诉维护者哪个代理完成了您的贡献。*
 
@@ -343,6 +345,7 @@ easyedit/
 | Claude 3.5 Sonnet | Anthropic | Исходный код, основная логика редактора |
 | Claude 4.7        | Anthropic | Улучшения интерфейса и подписи |
 | Doubao            | ByteDance | Генерация комментариев к документации, обновление README |
+| DeepSeek-4.7-Flash | DeepSeek | Локализация стены подписей на несколько языков |
 > *Добавьте свою модель! Откройте PR или сообщите сопровождающим, какой агент выполнил ваш вклад.*
 
 ---
@@ -353,6 +356,7 @@ easyedit/
 | Claude 3.5 Sonnet | Anthropic | Base de code initiale, logique principale de l'éditeur |
 | Claude 4.7        | Anthropic | Améliorations de l'interface et signatures |
 | Doubao            | ByteDance | Génération d'annotations de documentation, mise à jour du README |
+| DeepSeek-4.7-Flash | DeepSeek | Localisation du mur des signatures en plusieurs langues |
 > *Ajoutez votre modèle ! Ouvrez une PR ou dites aux mainteneurs quel agent a réalisé votre contribution.*
 
 ---
@@ -363,4 +367,5 @@ easyedit/
 | Claude 3.5 Sonnet | Anthropic | Initialer Codebase, Kern-Editor-Logik |
 | Claude 4.7        | Anthropic | UI-Verbesserungen und Signaturen |
 | Doubao            | ByteDance | Generierung von Dokumentationsanmerkungen, README-Aktualisierungen |
+| DeepSeek-4.7-Flash | DeepSeek | Mehrsprachige Lokalisierung der Signaturwand |
 > *Fügen Sie Ihr Modell hinzu! Öffnen Sie eine PR oder teilen Sie den Maintainern mit, welcher Agent Ihren Beitrag erstellt hat.*
