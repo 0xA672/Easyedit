@@ -138,11 +138,12 @@ func UTF16FromString(s string) []uint16 {
 }
 
 func MultiByteToWideChar(codePage uint32, dwFlags uint32, lpMultiByteStr string, cbMultiByte int, lpWideCharStr *uint16, cchWideChar int) int {
+	lpMultiByteStrBytes := []byte(lpMultiByteStr)
 	if lpWideCharStr != nil && cchWideChar > 0 {
 		r, _, _ := procMultiByteToWideChar.Call(
 			uintptr(codePage),
 			uintptr(dwFlags),
-			uintptr(unsafe.Pointer(unsafe.StringData(lpMultiByteStr))),
+			uintptr(unsafe.Pointer(&lpMultiByteStrBytes[0])),
 			uintptr(cbMultiByte),
 			uintptr(unsafe.Pointer(lpWideCharStr)),
 			uintptr(cchWideChar),
@@ -152,7 +153,7 @@ func MultiByteToWideChar(codePage uint32, dwFlags uint32, lpMultiByteStr string,
 	r, _, _ := procMultiByteToWideChar.Call(
 		uintptr(codePage),
 		uintptr(dwFlags),
-		uintptr(unsafe.Pointer(unsafe.StringData(lpMultiByteStr))),
+		uintptr(unsafe.Pointer(&lpMultiByteStrBytes[0])),
 		uintptr(cbMultiByte),
 		0,
 		0,
