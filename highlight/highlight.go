@@ -23,6 +23,7 @@
 // - .c / .h  C
 // - .cpp / .hpp / .cc  C++
 // - .rb  Ruby
+// - .vix / .vixl  Vix-lang
 package highlight
 
 import (
