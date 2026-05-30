@@ -132,7 +132,8 @@ func (e *Editor) Run() error {
 	e.termW, e.termH = e.screen.Size()
 	e.screen.EnableMouse()
 
-	e.showMsg("EasyEdit - Press Ctrl+Q to quit, Ctrl+S to save, : for command")
+	// Show welcome message with signature
+	e.showMsg("EasyEdit - Press Ctrl+Q to quit, Ctrl+S to save, : for command | Powered by Claude 4.7")
 
 	for e.running {
 		e.render()
