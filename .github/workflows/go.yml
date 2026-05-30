@@ -1,8 +1,10 @@
-name: Go CI
+name: Go CI and Release
 
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
 
@@ -38,10 +40,11 @@ jobs:
           fail_ci_if_error: false
           verbose: true
 
-  build:
-    name: Build
+  build-and-release:
+    name: Cross-Platform Build & Release
     runs-on: ubuntu-latest
     needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
       
@@ -51,12 +54,43 @@ jobs:
           go-version: '1.21'
           cache: true
       
-      - name: Build
-        run: go build -v ./...
+      - name: Build Binaries for All Platforms
+        run: |
+          mkdir -p dist
+          
+          # Linux AMD64
+          echo "Building for Linux AMD64..."
+          GOOS=linux GOARCH=amd64 go build -o dist/easyedit-linux-amd64 .
+          
+          # Linux ARM64
+          echo "Building for Linux ARM64..."
+          GOOS=linux GOARCH=arm64 go build -o dist/easyedit-linux-arm64 .
+          
+          # macOS AMD64
+          echo "Building for macOS AMD64..."
+          GOOS=darwin GOARCH=amd64 go build -o dist/easyedit-darwin-amd64 .
+          
+          # macOS ARM64 (M1/M2)
+          echo "Building for macOS ARM64..."
+          GOOS=darwin GOARCH=arm64 go build -o dist/easyedit-darwin-arm64 .
+          
+          # Windows AMD64
+          echo "Building for Windows AMD64..."
+          GOOS=windows GOARCH=amd64 go build -o dist/easyedit-windows-amd64.exe .
+          
+          # Generate SHA256 checksums
+          echo "Generating checksums..."
+          cd dist && sha256sum * > checksums.txt
+          
+          echo "Build complete. Files:"
+          ls -lh
       
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: easyedit-binary
-          path: easyedit
-          retention-days: 7
+          files: dist/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
