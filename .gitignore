@@ -1,18 +1,66 @@
-# Binaries
-easyedit
-easyedit.exe
-*.exe
+```
+# Dependencies
+go.sum
 
-# IDE/editor
-.idea/
+# Build artifacts
+bin/
+dist/
+build/
+*.so
+*.exe
+*.dll
+*.dylib
+*.jar
+*.war
+*.class
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+
+# Editor/IDE
 .vscode/
+.idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
-wiki_tmp
-WIKI.md
-wiki.html
-upload-all.ps1
+
+# Cache
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+.coverage
+coverage/
+htmlcov/
+
+# Compressed
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```
