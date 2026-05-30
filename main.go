@@ -107,7 +107,44 @@ func main() {
 }
 
 func printUsage() {
-	os.Stdout.WriteString(`EasyEdit — Hybrid terminal text editor
+	// Detect system language for localized help
+	lang := os.Getenv("LANG")
+	isZh := len(lang) >= 2 && lang[:2] == "zh"
+
+	if isZh {
+		os.Stdout.WriteString(`EasyEdit — 混合终端文本编辑器
+
+用法:
+  easyedit [flags] [file]
+
+标志:
+  --help       打印此帮助信息
+  --version    打印版本并退出
+
+示例:
+  easyedit              打开空白文件
+  easyedit main.go      打开 main.go 进行编辑
+
+键位绑定（在编辑器内）:
+  Ctrl+S    保存        Ctrl+Q    退出
+  Ctrl+F    搜索        Ctrl+H    替换
+  Ctrl+Z    撤销        Ctrl+Y    重做
+  Ctrl+X    剪切        Ctrl+C    复制        Ctrl+V    粘贴
+  Ctrl+A    全选        Alt+W     切换软换行
+  :         进入命令模式
+
+命令 (: 模式):
+  :q        退出           :q!       强制退出
+  :w        保存           :w <path> 另存为
+  :wq       保存并退出     :e <path> 打开文件
+  :42       跳转到第 42 行   :set nu   显示行号
+  :%s/a/b/g 全部替换       :10,20d   删除第 10-20 行
+
+更多信息请访问：https://github.com/0xA672/Easyedit
+文档：https://github.com/0xA672/Easyedit/tree/main/docs
+`)
+	} else {
+		os.Stdout.WriteString(`EasyEdit — Hybrid terminal text editor
 
 Usage:
   easyedit [flags] [file]
@@ -134,5 +171,9 @@ Commands (: mode):
   :wq       Save & quit    :e <path> Open file
   :42       Go to line 42  :set nu   Show line numbers
   :%s/a/b/g Replace all    :10,20d   Delete lines 10-20
+
+More info: https://github.com/0xA672/Easyedit
+Docs: https://github.com/0xA672/Easyedit/tree/main/docs
 `)
+	}
 }
