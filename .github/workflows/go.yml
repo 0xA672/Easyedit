@@ -7,14 +7,56 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  test:
+    name: Test & Coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21'
-      - run: go fmt ./...
-      - run: go vet ./...
-      - run: go test ./...
-      - run: go build -v ./...
+          cache: true
+      
+      - name: Format check
+        run: |
+          go fmt ./...
+          git diff --exit-code -- '*.go' || (echo "Code not formatted, please run 'go fmt ./...'" && exit 1)
+      
+      - name: Vet
+        run: go vet ./...
+      
+      - name: Test with coverage
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.out
+          flags: unittests
+          fail_ci_if_error: false
+          verbose: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+      
+      - name: Build
+        run: go build -v ./...
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: easyedit-binary
+          path: easyedit
+          retention-days: 7
