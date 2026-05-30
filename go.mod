@@ -1,4 +1,4 @@
-module easyedit
+module Easyedit
 
 go 1.19
 
