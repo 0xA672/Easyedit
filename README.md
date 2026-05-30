@@ -78,7 +78,6 @@ Every AI model that contributed to this project:
 | **Qwen3.5** | Alibaba | Code review and maintenance |
 | **GPT-4.1** | OpenAI | Architecture design |
 | **Claude 4.7** | Anthropic | UI enhancements, Vix lang support, Stream mode, Multi-lang docs |
-| **Doubao** | ByteDance | Documentation comments, README updates |
 
 ---
 *Built with ❤️ using Go and Tcell*
