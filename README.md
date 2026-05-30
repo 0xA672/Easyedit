@@ -10,7 +10,7 @@
 > Every line of this editor is authored by AI agents.  
 > [See who contributed →](#-contributors-signature-wall)
 
-**EasyEdit** is a hybrid terminal text editor with **stream processing capabilities** – works both as a full‑featured TUI editor and a non‑interactive `sed`‑style filter.
+**EasyEdit** is a hybrid terminal text editor that offers **stream processing capabilities** — functioning both as a full‑featured TUI editor and a non‑interactive `sed`‑style filter.
 
 ---
 
@@ -18,11 +18,11 @@
 
 | Mode | Description |
 |------|-------------|
-| 🖥️ **TUI Editor** | Full terminal UI with syntax highlighting (200+ languages), multi‑cursor, undo/redo, and command mode |
-| ⚡ **Stream Mode** | Non‑interactive `stdin`/`stdout` processing – perfect for CI/CD, shell pipelines, and in‑place edits |
+| 🖥️ **TUI Editor** | Full terminal UI with syntax highlighting for 200+ languages, multi‑cursor editing, undo/redo, and command mode |
+| ⚡ **Stream Mode** | Non‑interactive `stdin`/`stdout` processing — ideal for CI/CD, shell pipelines, and in‑place edits |
 | 📦 **Gap Buffer** | Efficient text storage for large files |
 | 🔁 **Undo/Redo** | Full history stack (`Ctrl+Z` / `Ctrl+Y`) |
-| 🌍 **Cross‑Platform** | Pre‑built binaries for **24+ platforms** (Linux, macOS, Windows, FreeBSD, ARM, RISC‑V, etc.) |
+| 🌍 **Cross‑Platform** | Pre‑built binaries available for **24+ platforms**, including Linux, macOS, Windows, FreeBSD, ARM, RISC‑V, and more |
 
 ---
 
@@ -31,7 +31,7 @@
 ### 📥 Installation
 
 **Option 1: Download Prebuilt Binary (Recommended)**  
-Visit the [Releases](https://github.com/0xA672/Easyedit/releases) page – binaries available for Linux, macOS, Windows, and many more.
+Visit the [Releases](https://github.com/0xA672/Easyedit/releases) page – binaries are available for Linux, macOS, Windows, and many more.
 
 **Option 2: Go Install**  
 ```bash
@@ -51,16 +51,16 @@ go build -o easyedit .
 
 #### Interactive Mode
 ```bash
-easyedit                # Open empty buffer
-easyedit main.go        # Open existing file
+easyedit                # Open an empty buffer
+easyedit main.go        # Open an existing file
 ```
 
 #### Stream Mode (sed‑like)
 ```bash
-# Replace text in pipeline
+# Replace text in a pipeline
 echo "hello world" | easyedit -s -e 's/world/Go/g'
 
-# Delete lines matching pattern
+# Delete lines matching a pattern
 cat log.txt | easyedit -s -e '/DEBUG/d'
 
 # In-place file editing
@@ -96,9 +96,9 @@ Every AI model that contributed to this project:
 
 ## 🧠 Why “EasyEdit”?
 
-- **Easy** to use interactively, **easy** to script in pipelines.  
+- **Easy** to use interactively, and **easy** to script in pipelines.  
 - Built entirely by **AI** – a living experiment in vibe‑driven development.  
-- Lightweight, fast, and **portable** – one binary.
+- Lightweight, fast, and **portable** — a single binary.
 
 ---
 
