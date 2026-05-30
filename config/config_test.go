@@ -110,9 +110,9 @@ func TestDefaultConfigThemeColors(t *testing.T) {
 func TestDefaultConfigKeys(t *testing.T) {
 	cfg := defaultConfig()
 	tests := []struct {
-		name  string
-		got   string
-		want  string
+		name string
+		got  string
+		want string
 	}{
 		{"Save", cfg.Keys.Save, "Ctrl+S"},
 		{"Quit", cfg.Keys.Quit, "Ctrl+Q"},

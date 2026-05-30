@@ -191,7 +191,7 @@ func TestHighlighterTokenizeCache(t *testing.T) {
 func TestHighlighterTokenizeInvalidSyntax(t *testing.T) {
 	h := NewHighlighter("test.py")
 	tokens := h.Tokenize("   \n\n\n") // minimal valid-ish content
-	_ = tokens // should not panic
+	_ = tokens                        // should not panic
 }
 
 func TestHighlighterSetFile(t *testing.T) {

@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/chroma/v2 v2.14.0
 	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/mattn/go-runewidth v0.0.15
-	golang.org/x/text v0.37.0
+	golang.org/x/text v0.14.0
 )
 
 require (

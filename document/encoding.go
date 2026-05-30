@@ -18,7 +18,7 @@ import (
 type CommonEncoding int
 
 const (
-	EncUnknown  CommonEncoding = iota
+	EncUnknown CommonEncoding = iota
 	EncUTF8
 	EncUTF16LE
 	EncUTF16BE

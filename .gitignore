@@ -1,4 +1,48 @@
 ```
-# Coverage reports
-coverage.out
+# Go-specific ignores
+*.o
+*.a
+*.out
+*.test
+*.prof
+*.syso
+
+# Dependencies
+vendor/
+
+# Build artifacts
+bin/
+pkg/
+*.exe
+*.dll
+*.so
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Cache directories
+__pycache__/
+.mypy_cache/
+.pytest_cache/
 ```

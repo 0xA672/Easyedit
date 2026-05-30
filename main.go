@@ -50,12 +50,12 @@
 package main
 
 import (
- "flag"
- "fmt"
- "os"
- "runtime/debug"
+	"flag"
+	"fmt"
+	"os"
+	"runtime/debug"
 
- "easyedit/ui"
+	"easyedit/ui"
 )
 
 // Version holds the editor version. Priority:
@@ -65,49 +65,49 @@ import (
 var Version = "0.2.0-dev"
 
 func init() {
- if info, ok := debug.ReadBuildInfo(); ok {
-  v := info.Main.Version
-  if v != "" && v != "(devel)" {
-   Version = v
-  }
- }
+	if info, ok := debug.ReadBuildInfo(); ok {
+		v := info.Main.Version
+		if v != "" && v != "(devel)" {
+			Version = v
+		}
+	}
 }
 
 func main() {
- showVersion := flag.Bool("version", false, "print version and exit")
- showHelp := flag.Bool("help", false, "print this help message")
- flag.Usage = printUsage
- flag.Parse()
+	showVersion := flag.Bool("version", false, "print version and exit")
+	showHelp := flag.Bool("help", false, "print this help message")
+	flag.Usage = printUsage
+	flag.Parse()
 
- if *showVersion {
-  fmt.Printf("EasyEdit %s\n", Version)
-  os.Exit(0)
- }
+	if *showVersion {
+		fmt.Printf("EasyEdit %s\n", Version)
+		os.Exit(0)
+	}
 
- if *showHelp {
-  printUsage()
-  os.Exit(0)
- }
+	if *showHelp {
+		printUsage()
+		os.Exit(0)
+	}
 
- editor := ui.NewEditor()
+	editor := ui.NewEditor()
 
- // If a positional argument is provided, open that file
- if args := flag.Args(); len(args) > 0 {
-  filePath := args[0]
-  if err := editor.OpenFile(filePath); err != nil {
-   fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-   os.Exit(1)
-  }
- }
+	// If a positional argument is provided, open that file
+	if args := flag.Args(); len(args) > 0 {
+		filePath := args[0]
+		if err := editor.OpenFile(filePath); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
- if err := editor.Run(); err != nil {
-  fmt.Fprintf(os.Stderr, "Fatal error: %v\n", err)
-  os.Exit(1)
- }
+	if err := editor.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Fatal error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func printUsage() {
- os.Stdout.WriteString(`EasyEdit — Hybrid terminal text editor
+	os.Stdout.WriteString(`EasyEdit — Hybrid terminal text editor
 
 Usage:
   easyedit [flags] [file]

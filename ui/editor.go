@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/chroma/v2"
 	"easyedit/clipboard"
+	"github.com/alecthomas/chroma/v2"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 

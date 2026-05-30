@@ -365,9 +365,9 @@ func (gb *GapBuffer) BytePos(runePos int) int {
 
 // Document is the high-level document structure wrapping GapBuffer.
 type Document struct {
-	Buffer   *GapBuffer // underlying gap buffer
-	FilePath string     // file path
-	Modified bool       // modified flag
+	Buffer   *GapBuffer     // underlying gap buffer
+	FilePath string         // file path
+	Modified bool           // modified flag
 	Encoding CommonEncoding // detected file encoding
 }
 
