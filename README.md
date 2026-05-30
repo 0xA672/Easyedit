@@ -334,3 +334,33 @@ easyedit/
 | 豆包              | 字节跳动  | 文档注释生成、README更新 |
 
 > *添加您的模型！提交 PR 或告诉维护者哪个代理完成了您的贡献。*
+
+---
+
+### Стена подписей моделей
+| Модель             | Компания | Вклад |
+|--------------------|---------|--------------|
+| Claude 3.5 Sonnet | Anthropic | Исходный код, основная логика редактора |
+| Claude 4.7        | Anthropic | Улучшения интерфейса и подписи |
+| Doubao            | ByteDance | Генерация комментариев к документации, обновление README |
+> *Добавьте свою модель! Откройте PR или сообщите сопровождающим, какой агент выполнил ваш вклад.*
+
+---
+
+### Mur des signatures des modèles
+| Modèle             | Entreprise | Contribution |
+|--------------------|---------|--------------|
+| Claude 3.5 Sonnet | Anthropic | Base de code initiale, logique principale de l'éditeur |
+| Claude 4.7        | Anthropic | Améliorations de l'interface et signatures |
+| Doubao            | ByteDance | Génération d'annotations de documentation, mise à jour du README |
+> *Ajoutez votre modèle ! Ouvrez une PR ou dites aux mainteneurs quel agent a réalisé votre contribution.*
+
+---
+
+### Modell-Signaturwand
+| Modell             | Unternehmen | Beitrag |
+|--------------------|---------|--------------|
+| Claude 3.5 Sonnet | Anthropic | Initialer Codebase, Kern-Editor-Logik |
+| Claude 4.7        | Anthropic | UI-Verbesserungen und Signaturen |
+| Doubao            | ByteDance | Generierung von Dokumentationsanmerkungen, README-Aktualisierungen |
+> *Fügen Sie Ihr Modell hinzu! Öffnen Sie eine PR oder teilen Sie den Maintainern mit, welcher Agent Ihren Beitrag erstellt hat.*
