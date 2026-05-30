@@ -98,7 +98,7 @@ Every AI model that contributed to this project:
 
 - **Easy** to use interactively, **easy** to script in pipelines.  
 - Built entirely by **AI** – a living experiment in vibe‑driven development.  
-- Lightweight, fast, and **portable** – one binary, no dependencies.
+- Lightweight, fast, and **portable** – one binary.
 
 ---
 
