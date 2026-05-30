@@ -170,6 +170,7 @@ Every AI model that has contributed code or design to this project is listed her
 | Qwen3.5           | Alibaba   | Code review and maintenance |
 | GPT-4.1           | OpenAI    | Architecture design |
 | Claude 4.7        | Anthropic | UI enhancements and signatures |
+| Doubao            | ByteDance | Documentation annotation generation, README updates |
 
 > *Add your model! Open a PR or tell the maintainers which agent authored your contribution.*
 
@@ -330,5 +331,6 @@ easyedit/
 | Qwen3.5           | 阿里巴巴  | 代码审查和维护 |
 | GPT-4.1           | OpenAI    | 架构设计 |
 | Claude 4.7        | Anthropic | UI 增强和签名 |
+| 豆包              | 字节跳动  | 文档注释生成、README更新 |
 
 > *添加您的模型！提交 PR 或告诉维护者哪个代理完成了您的贡献。*
