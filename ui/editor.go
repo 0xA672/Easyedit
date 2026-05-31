@@ -31,12 +31,14 @@ import (
 	"github.com/0xA672/Easyedit/highlight"
 )
 
-// Mode represents the editor mode.
+// Mode represents the editor mode (Vim-style).
 type Mode int
 
 const (
-	ModeInsert  Mode = iota // Insert mode
-	ModeCommand             // Command mode
+	ModeNormal  Mode = iota // Normal mode (default) - navigation and commands
+	ModeInsert              // Insert mode - text input
+	ModeVisual              // Visual mode - selection
+	ModeCommand             // Command-line mode
 	ModeSearch              // Search mode
 	ModeReplace             // Replace mode
 )
@@ -103,15 +105,21 @@ type chromaToken = chroma.Token
 
 // NewEditor creates a new Editor instance.
 func NewEditor() *Editor {
+	cfg := config.LoadConfig()
+	initialMode := ModeInsert
+	if cfg.VimMode {
+		initialMode = ModeNormal
+	}
+	
 	e := &Editor{
-		config:    config.LoadConfig(),
+		config:    cfg,
 		doc:       document.NewDocument(),
 		undo:      document.NewUndoStack(100),
 		running:   true,
 		selStart:  -1,
 		selEnd:    -1,
 		searchDir: 1,
-		mode:      ModeInsert,
+		mode:      initialMode,
 	}
 	e.hl = highlight.NewHighlighter("")
 	return e
@@ -288,8 +296,12 @@ func (e *Editor) handleEvent(ev tcell.Event) {
 		return
 	case *tcell.EventKey:
 		switch e.mode {
+		case ModeNormal:
+			e.handleNormalMode(ev)
 		case ModeInsert:
 			e.handleInsertMode(ev)
+		case ModeVisual:
+			e.handleVisualMode(ev)
 		case ModeCommand:
 			e.handleCommandMode(ev)
 		case ModeSearch:
@@ -332,6 +344,388 @@ func (e *Editor) handleMouse(ev *tcell.EventMouse) {
 		e.selecting = true
 		e.selStart = e.cursor
 		e.selEnd = e.cursor
+	}
+}
+
+// ---- Normal Mode Event Handling ----
+
+func (e *Editor) handleNormalMode(ev *tcell.EventKey) {
+	switch ev.Key() {
+	case tcell.KeyRune:
+		ch := ev.Rune()
+		switch ch {
+		case 'i':
+			// Enter insert mode
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'a':
+			// Append after cursor
+			if e.cursor < e.doc.Len() {
+				e.moveCursor(1)
+			}
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'o':
+			// Open new line below
+			e.moveLineEnd()
+			e.doNewLine()
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'O':
+			// Open new line above
+			e.moveLineStart()
+			e.doNewLine()
+			e.moveUp()
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case ':':
+			// Enter command mode
+			e.mode = ModeCommand
+			e.cmdBuffer = ""
+		case '/':
+			// Enter search mode
+			e.mode = ModeSearch
+			e.cmdBuffer = ""
+			e.searchQuery = ""
+		case 'v':
+			// Enter visual mode
+			e.mode = ModeVisual
+			e.selStart = e.cursor
+			e.selEnd = e.cursor
+			e.selecting = true
+			e.showMsg("-- VISUAL --")
+		case 'V':
+			// Enter visual line mode
+			e.mode = ModeVisual
+			e.moveLineStart()
+			e.selStart = e.cursor
+			e.moveLineEnd()
+			e.selEnd = e.cursor
+			e.selecting = true
+			e.showMsg("-- VISUAL LINE --")
+		case 'u':
+			// Undo
+			e.doUndo()
+		case 'r':
+			// Redo
+			e.doRedo()
+		case 'y':
+			// Yank (copy)
+			e.doCopy()
+			e.showMsg("Yanked")
+		case 'd':
+			// Delete (cut)
+			e.doCut()
+			e.showMsg("Deleted")
+		case 'p':
+			// Paste
+			e.doPaste()
+		case 'G':
+			// Go to end of file
+			e.cursor = e.doc.Len()
+			e.clampCursor()
+		case 'g':
+			// gg - go to beginning of file
+			e.cursor = 0
+			e.clampCursor()
+		case '$':
+			// Go to end of line
+			e.moveLineEnd()
+		case '0':
+			// Go to beginning of line
+			e.moveLineStart()
+		case 'w':
+			// Word forward
+			e.moveWordForward()
+		case 'b':
+			// Word backward
+			e.moveWordBackward()
+		case 'h':
+			// Left
+			e.moveCursor(-1)
+		case 'j':
+			// Down
+			e.moveDown()
+		case 'k':
+			// Up
+			e.moveUp()
+		case 'l':
+			// Right
+			e.moveCursor(1)
+		case 'x':
+			// Delete character under cursor
+			e.doDelete()
+		case 'X':
+			// Delete character before cursor
+			e.doBackspace()
+		case 's':
+			// Substitute character
+			e.doDelete()
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'S':
+			// Substitute line
+			e.moveLineStart()
+			e.moveLineEnd()
+			if e.selStart >= 0 {
+				start, end := e.getSelectionRange()
+				e.doc.DeleteRange(start, end-start)
+				e.undo.Push(document.UndoDelete, start, nil, e.doc.Buffer.Slice(start, end))
+				e.cursor = start
+			}
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'I':
+			// Insert at beginning of line
+			e.moveLineStart()
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'A':
+			// Append at end of line
+			e.moveLineEnd()
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'D':
+			// Delete to end of line
+			e.moveLineEnd()
+			if e.selStart >= 0 {
+				start, end := e.getSelectionRange()
+				e.doc.DeleteRange(start, end-start)
+				e.undo.Push(document.UndoDelete, start, nil, e.doc.Buffer.Slice(start, end))
+				e.cursor = start
+			}
+			e.showMsg("Deleted")
+		case 'C':
+			// Change to end of line
+			e.moveLineEnd()
+			if e.selStart >= 0 {
+				start, end := e.getSelectionRange()
+				e.doc.DeleteRange(start, end-start)
+				e.undo.Push(document.UndoDelete, start, nil, e.doc.Buffer.Slice(start, end))
+				e.cursor = start
+			}
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'c':
+			// Change motion (simplified: just delete and enter insert)
+			e.doCut()
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		default:
+			// Ignore other keys in normal mode
+		}
+
+	case tcell.KeyEscape:
+		// Esc behavior depends on VimMode configuration
+		if e.config.VimMode {
+			// In Vim mode, Esc returns to Normal mode
+			e.mode = ModeNormal
+			e.showMsg("")
+		} else {
+			// In legacy mode, Esc enters command mode
+			e.mode = ModeCommand
+			e.cmdBuffer = ""
+		}
+
+	case tcell.KeyCtrlQ:
+		e.Quit(false)
+
+	case tcell.KeyCtrlS:
+		if err := e.SaveFile(""); err != nil {
+			e.showMsg(err.Error())
+		} else {
+			e.showMsg("saved")
+		}
+
+	case tcell.KeyEnter:
+		// In normal mode, enter opens new line below
+		e.moveLineEnd()
+		e.doNewLine()
+		e.mode = ModeInsert
+		e.showMsg("-- INSERT --")
+
+	case tcell.KeyLeft, tcell.KeyCtrlH:
+		e.moveCursor(-1)
+	case tcell.KeyRight, tcell.KeyCtrlL:
+		e.moveCursor(1)
+	case tcell.KeyUp, tcell.KeyCtrlK:
+		e.moveUp()
+	case tcell.KeyDown, tcell.KeyCtrlJ:
+		e.moveDown()
+	case tcell.KeyHome:
+		e.moveLineStart()
+	case tcell.KeyEnd:
+		e.moveLineEnd()
+	case tcell.KeyPgUp:
+		e.movePageUp()
+	case tcell.KeyPgDn:
+		e.movePageDown()
+
+	case tcell.KeyCtrlZ:
+		e.doUndo()
+	case tcell.KeyCtrlY:
+		e.doRedo()
+
+	default:
+		// Ignore other keys
+	}
+}
+
+// moveWordForward moves cursor to the next word.
+func (e *Editor) moveWordForward() {
+	for e.cursor < e.doc.Len() {
+		ch := e.doc.Buffer.RuneAt(e.cursor)
+		if ch == ' ' || ch == '\t' || ch == '\n' {
+			e.cursor++
+		} else {
+			break
+		}
+	}
+	for e.cursor < e.doc.Len() {
+		ch := e.doc.Buffer.RuneAt(e.cursor)
+		if ch == ' ' || ch == '\t' || ch == '\n' {
+			break
+		}
+		e.cursor++
+	}
+	e.clampCursor()
+}
+
+// moveWordBackward moves cursor to the previous word.
+func (e *Editor) moveWordBackward() {
+	if e.cursor <= 0 {
+		return
+	}
+	e.cursor--
+	for e.cursor > 0 {
+		ch := e.doc.Buffer.RuneAt(e.cursor)
+		if ch != ' ' && ch != '\t' && ch != '\n' {
+			break
+		}
+		e.cursor--
+	}
+	for e.cursor > 0 {
+		ch := e.doc.Buffer.RuneAt(e.cursor-1)
+		if ch == ' ' || ch == '\t' || ch == '\n' {
+			break
+		}
+		e.cursor--
+	}
+	e.clampCursor()
+}
+
+// ---- Visual Mode Event Handling ----
+
+func (e *Editor) handleVisualMode(ev *tcell.EventKey) {
+	switch ev.Key() {
+	case tcell.KeyRune:
+		ch := ev.Rune()
+		switch ch {
+		case 'y':
+			// Yank selection
+			e.doCopy()
+			e.selecting = false
+			e.selStart = -1
+			e.selEnd = -1
+			e.mode = ModeNormal
+			e.showMsg("Yanked")
+		case 'd':
+			// Delete selection
+			e.doCut()
+			e.selecting = false
+			e.selStart = -1
+			e.selEnd = -1
+			e.mode = ModeNormal
+			e.showMsg("Deleted")
+		case 'c':
+			// Change selection
+			e.doCut()
+			e.mode = ModeInsert
+			e.showMsg("-- INSERT --")
+		case 'p':
+			// Paste over selection
+			e.doCut()
+			e.doPaste()
+			e.selecting = false
+			e.selStart = -1
+			e.selEnd = -1
+			e.mode = ModeNormal
+		case 'v':
+			// Exit visual mode
+			e.selecting = false
+			e.selStart = -1
+			e.selEnd = -1
+			e.mode = ModeNormal
+			e.showMsg("")
+		case ':':
+			// Enter command mode with visual range
+			e.mode = ModeCommand
+			e.cmdBuffer = ""
+		case 'h':
+			e.moveCursor(-1)
+			e.selEnd = e.cursor
+		case 'j':
+			e.moveDown()
+			e.selEnd = e.cursor
+		case 'k':
+			e.moveUp()
+			e.selEnd = e.cursor
+		case 'l':
+			e.moveCursor(1)
+			e.selEnd = e.cursor
+		case 'w':
+			e.moveWordForward()
+			e.selEnd = e.cursor
+		case 'b':
+			e.moveWordBackward()
+			e.selEnd = e.cursor
+		case '$':
+			e.moveLineEnd()
+			e.selEnd = e.cursor
+		case '0':
+			e.moveLineStart()
+			e.selEnd = e.cursor
+		case 'G':
+			e.cursor = e.doc.Len()
+			e.clampCursor()
+			e.selEnd = e.cursor
+		case 'g':
+			e.cursor = 0
+			e.clampCursor()
+			e.selEnd = e.cursor
+		default:
+			// Ignore other keys
+		}
+
+	case tcell.KeyEscape:
+		// Exit visual mode
+		e.selecting = false
+		e.selStart = -1
+		e.selEnd = -1
+		e.mode = ModeNormal
+		e.showMsg("")
+
+	case tcell.KeyLeft, tcell.KeyCtrlH:
+		e.moveCursor(-1)
+		e.selEnd = e.cursor
+	case tcell.KeyRight, tcell.KeyCtrlL:
+		e.moveCursor(1)
+		e.selEnd = e.cursor
+	case tcell.KeyUp, tcell.KeyCtrlK:
+		e.moveUp()
+		e.selEnd = e.cursor
+	case tcell.KeyDown, tcell.KeyCtrlJ:
+		e.moveDown()
+		e.selEnd = e.cursor
+	case tcell.KeyHome:
+		e.moveLineStart()
+		e.selEnd = e.cursor
+	case tcell.KeyEnd:
+		e.moveLineEnd()
+		e.selEnd = e.cursor
+
+	default:
+		// Ignore other keys
 	}
 }
 
@@ -483,7 +877,11 @@ func (e *Editor) handleInsertMode(ev *tcell.EventKey) {
 func (e *Editor) handleCommandMode(ev *tcell.EventKey) {
 	switch ev.Key() {
 	case tcell.KeyEscape:
-		e.mode = ModeInsert
+		if e.config.VimMode {
+			e.mode = ModeNormal
+		} else {
+			e.mode = ModeInsert
+		}
 		e.cmdBuffer = ""
 		e.showMsg("")
 	case tcell.KeyEnter:
@@ -502,13 +900,21 @@ func (e *Editor) handleCommandMode(ev *tcell.EventKey) {
 func (e *Editor) handleSearchMode(ev *tcell.EventKey) {
 	switch ev.Key() {
 	case tcell.KeyEscape:
-		e.mode = ModeInsert
+		if e.config.VimMode {
+			e.mode = ModeNormal
+		} else {
+			e.mode = ModeInsert
+		}
 		e.cmdBuffer = ""
 		e.unhighlightSearch()
 	case tcell.KeyEnter:
 		e.searchQuery = e.cmdBuffer
 		e.doSearch()
-		e.mode = ModeInsert
+		if e.config.VimMode {
+			e.mode = ModeNormal
+		} else {
+			e.mode = ModeInsert
+		}
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if len(e.cmdBuffer) > 0 {
 			e.cmdBuffer = e.cmdBuffer[:len(e.cmdBuffer)-1]
@@ -1386,8 +1792,12 @@ func (e *Editor) renderStatusBar() {
 
 	var modeStr string
 	switch e.mode {
+	case ModeNormal:
+		modeStr = "NORMAL"
 	case ModeInsert:
 		modeStr = "INSERT"
+	case ModeVisual:
+		modeStr = "VISUAL"
 	case ModeCommand:
 		modeStr = "COMMAND"
 	case ModeSearch:
@@ -1459,8 +1869,14 @@ func (e *Editor) renderStatusBar() {
 	if e.message != "" && time.Since(e.messageTime) < 5*time.Second {
 		statusText = e.message
 	} else {
-		statusText = fmt.Sprintf("%s%s  %s  %d:%d  U:%d R:%d",
-			modeStr, modified, fileName, line+1, col+1, undoCount, redoCount)
+		// Build status line based on configuration
+		if e.config.ShowMode {
+			statusText = fmt.Sprintf("%s%s  %s  %d:%d  U:%d R:%d",
+				modeStr, modified, fileName, line+1, col+1, undoCount, redoCount)
+		} else {
+			statusText = fmt.Sprintf("%s%s  %d:%d  U:%d R:%d",
+				modified, fileName, line+1, col+1, undoCount, redoCount)
+		}
 	}
 
 	// Render status bar

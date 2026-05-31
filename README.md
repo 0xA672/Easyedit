@@ -20,9 +20,53 @@
 |------|-------------|
 | 🖥️ **TUI Editor** | Full terminal UI with syntax highlighting for 200+ languages, multi‑cursor editing, undo/redo, and command mode |
 | ⚡ **Stream Mode** | Non‑interactive `stdin`/`stdout` processing — ideal for CI/CD, shell pipelines, and in‑place edits |
+| 🎮 **Vim Modes** | Complete Vim-style mode switching (NORMAL/INSERT/VISUAL/COMMAND) with configurable behavior |
 | 📦 **Gap Buffer** | Efficient text storage for large files |
 | 🔁 **Undo/Redo** | Full history stack (`Ctrl+Z` / `Ctrl+Y`) |
 | 🌍 **Cross‑Platform** | Pre‑built binaries available for **24+ platforms**, including Linux, macOS, Windows, FreeBSD, ARM, RISC‑V, and more |
+
+---
+
+## 🎮 Vim Mode Support
+
+EasyEdit now supports complete Vim-style mode switching! Enable it in your configuration:
+
+```toml
+# ~/.easyedit.toml or %APPDATA%/easyedit/config.toml
+vim_mode = true      # Enable Vim modes (default: false)
+show_mode = true     # Show mode indicator in status bar (default: true)
+show_line_num = true # Show line numbers (default: true)
+```
+
+### Mode Types
+
+- **NORMAL** - Navigation and commands (h/j/k/l, w/b, gg/G, etc.)
+- **INSERT** - Text input (press `i`, `a`, `o`, etc. from Normal mode)
+- **VISUAL** - Text selection (press `v` or `V` from Normal mode)
+- **COMMAND** - Execute ex commands (press `:` from any mode)
+- **SEARCH** - Search text (press `/` from Normal mode)
+
+### Quick Reference
+
+| Action | Normal Mode Key | Description |
+|--------|----------------|-------------|
+| Enter Insert | `i` | Insert before cursor |
+| Append | `a` | Append after cursor |
+| New Line Below | `o` | Open new line below |
+| New Line Above | `O` | Open new line above |
+| Undo | `u` | Undo last change |
+| Redo | `r` | Redo last change |
+| Yank (Copy) | `y` | Copy selection/text |
+| Delete | `d` | Delete selection/text |
+| Paste | `p` | Paste from clipboard |
+| Visual Mode | `v` | Enter visual mode |
+| Visual Line | `V` | Enter visual line mode |
+| Word Forward | `w` | Jump to next word |
+| Word Backward | `b` | Jump to previous word |
+| Line Start | `0` | Go to line beginning |
+| Line End | `$` | Go to line end |
+| File Start | `gg` | Go to file beginning |
+| File End | `G` | Go to file end |
 
 ---
 

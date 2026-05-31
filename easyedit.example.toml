@@ -33,8 +33,10 @@ save_as = "Ctrl+Shift+S"
 # 编辑器选项
 tab_width = 4        # 缩进宽度
 show_line_num = true # 显示行号
+show_mode = true     # 在状态栏显示当前模式指示器
 backup = true        # 保存时创建 .bak 备份
 soft_wrap = true     # 软换行
 auto_indent = true   # 自动缩进
 undo_limit = 100     # 撤销步数上限
 tab_to_spaces = true # Tab 转空格
+vim_mode = false     # 启用 Vim 风格模式切换（NORMAL/INSERT/VISUAL）
