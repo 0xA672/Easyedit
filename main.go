@@ -43,11 +43,11 @@
 //
 // Dependencies:
 //
-//	- github.com/gdamore/tcell/v2      (terminal handling)
-//	- github.com/alecthomas/chroma/v2   (syntax highlighting)
-//	- github.com/atotto/clipboard       (system clipboard)
-//	- github.com/BurntSushi/toml        (config parsing)
-//	- github.com/mattn/go-runewidth     (character width)
+//   - github.com/gdamore/tcell/v2      (terminal handling)
+//   - github.com/alecthomas/chroma/v2   (syntax highlighting)
+//   - github.com/atotto/clipboard       (system clipboard)
+//   - github.com/BurntSushi/toml        (config parsing)
+//   - github.com/mattn/go-runewidth     (character width)
 package main
 
 import (
@@ -221,17 +221,18 @@ func runStreamMode(scripts []string, inPlace bool) {
 type Rule struct {
 	IsDelete bool
 	// For substitution
-	Pattern    *regexp.Regexp
-	Repl       string
-	Global     bool
+	Pattern *regexp.Regexp
+	Repl    string
+	Global  bool
 	// For delete
 	DeletePattern *regexp.Regexp
 }
 
 // parseRule parses a single sed‑style command.
 // Supported forms:
-//   s/pattern/replacement/flags   (any delimiter, e.g. s|a|b|)
-//   /pattern/d                    (delete lines matching pattern)
+//
+//	s/pattern/replacement/flags   (any delimiter, e.g. s|a|b|)
+//	/pattern/d                    (delete lines matching pattern)
 //
 // Flags: 'g' for global replacement.
 // Delimiter is the first character after 's' (or after the slash for delete).
@@ -365,12 +366,7 @@ func applyRulesToLine(line string, rules []Rule) string {
 			if rule.Global {
 				line = rule.Pattern.ReplaceAllString(line, rule.Repl)
 			} else {
-				line = rule.Pattern.ReplaceAllStringFunc(line, func(s string) string {
-					return rule.Pattern.ReplaceAllString(s, rule.Repl)
-				})
-				// Actually the above is global for the whole string; we need first match only.
-				// Simpler: replace first match using regexp.FindStringIndex.
-				// Let's do it properly:
+				// Replace only the first match
 				idx := rule.Pattern.FindStringIndex(line)
 				if idx != nil {
 					line = line[:idx[0]] + rule.Pattern.ReplaceAllString(line[idx[0]:idx[1]], rule.Repl) + line[idx[1]:]
