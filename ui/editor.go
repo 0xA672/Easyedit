@@ -102,6 +102,10 @@ type Editor struct {
 	// Per-frame render caches (recomputed once in render())
 	searchHlSet   map[int]struct{} // Set of rune positions highlighted by search
 	matchBrackPos int              // Position of bracket matching cursor (-1 if none)
+
+	// Cached theme colors (parsed once from config)
+	cursorLineBg tcell.Color // Background color for current line
+	lineNumCurFg tcell.Color // Foreground color for current line number
 }
 
 // Token type alias for convenience.
@@ -126,6 +130,8 @@ func NewEditor() *Editor {
 		mode:      initialMode,
 	}
 	e.hl = highlight.NewHighlighter("")
+	e.cursorLineBg = tcell.GetColor(cfg.Theme.CursorLineBg)
+	e.lineNumCurFg = tcell.GetColor(cfg.Theme.LineNumCurFg)
 	return e
 }
 
@@ -444,6 +450,12 @@ func (e *Editor) handleNormalMode(ev *tcell.EventKey) {
 		case 'b':
 			// Word backward
 			e.moveWordBackward()
+		case 'n':
+			// Next search match
+			e.searchNext()
+		case 'N':
+			// Previous search match
+			e.searchPrev()
 		case 'h':
 			// Left
 			e.moveCursor(-1)
@@ -1243,6 +1255,33 @@ func (e *Editor) unhighlightSearch() {
 	e.searchIdx = -1
 }
 
+// searchNext jumps to the next search match.
+func (e *Editor) searchNext() {
+	if len(e.searchResults) == 0 {
+		e.showMsg("no search results")
+		return
+	}
+	e.searchIdx = (e.searchIdx + 1) % len(e.searchResults)
+	e.cursor = e.searchResults[e.searchIdx]
+	e.clampCursor()
+	e.showMsg(fmt.Sprintf("match %d of %d", e.searchIdx+1, len(e.searchResults)))
+}
+
+// searchPrev jumps to the previous search match.
+func (e *Editor) searchPrev() {
+	if len(e.searchResults) == 0 {
+		e.showMsg("no search results")
+		return
+	}
+	e.searchIdx--
+	if e.searchIdx < 0 {
+		e.searchIdx = len(e.searchResults) - 1
+	}
+	e.cursor = e.searchResults[e.searchIdx]
+	e.clampCursor()
+	e.showMsg(fmt.Sprintf("match %d of %d", e.searchIdx+1, len(e.searchResults)))
+}
+
 // ---- Replace ----
 
 func (e *Editor) doReplace() {
@@ -1527,11 +1566,23 @@ func (e *Editor) clampCursor() {
 
 	// Auto-scroll viewport to keep the cursor visible
 	visibleLines := e.termH - 1 // rows available for text (excl. status bar)
-	if e.cursorRow < e.offsetRow {
-		e.offsetRow = e.cursorRow
+	margin := e.config.ScrollMargin
+	if margin >= visibleLines/2 {
+		margin = visibleLines/2 - 1
 	}
-	if e.offsetRow+visibleLines <= e.cursorRow {
-		e.offsetRow = e.cursorRow - visibleLines + 1
+	if margin < 0 {
+		margin = 0
+	}
+	// Scroll up if cursor is too close to top
+	if e.cursorRow < e.offsetRow+margin {
+		e.offsetRow = e.cursorRow - margin
+		if e.offsetRow < 0 {
+			e.offsetRow = 0
+		}
+	}
+	// Scroll down if cursor is too close to bottom
+	if e.offsetRow+visibleLines <= e.cursorRow+margin+1 {
+		e.offsetRow = e.cursorRow - visibleLines + margin + 1
 	}
 }
 
@@ -1608,7 +1659,14 @@ func (e *Editor) render() {
 	for y := 0; y < e.termH-1; y++ {
 		docLine := y + e.offsetRow
 		if docLine >= e.doc.LineCount() {
-			break
+			// Tilde markers for beyond-EOF lines (like vim)
+			if e.config.ShowLineNum {
+				numStr := fmt.Sprintf("%*s ", e.lineNumWidth()-2, "~")
+				for i, ch := range numStr {
+					e.screen.SetContent(i, y, ch, nil, tcell.StyleDefault.Foreground(tcell.ColorBlue).Background(tcell.ColorDefault))
+				}
+			}
+			continue
 		}
 
 		lineText := e.doc.Line(docLine)
@@ -1616,9 +1674,14 @@ func (e *Editor) render() {
 
 		// Line numbers
 		if e.config.ShowLineNum {
+			// Highlight current line number
+			lnFg := tcell.ColorBlue
+			if docLine == e.cursorRow {
+				lnFg = e.lineNumCurFg
+			}
 			numStr := fmt.Sprintf("%*d ", e.lineNumWidth()-2, docLine+1)
 			for i, ch := range numStr {
-				e.screen.SetContent(i, y, ch, nil, tcell.StyleDefault.Foreground(tcell.ColorBlue).Background(tcell.ColorDefault))
+				e.screen.SetContent(i, y, ch, nil, tcell.StyleDefault.Foreground(lnFg).Background(tcell.ColorDefault))
 			}
 		}
 
@@ -1646,14 +1709,32 @@ func (e *Editor) render() {
 	if cursorY >= 0 && cursorY < e.termH-1 {
 		e.screen.ShowCursor(cursorX, cursorY)
 	}
+
+	// Mode-specific cursor shape
+	switch e.mode {
+	case ModeNormal, ModeVisual:
+		e.screen.SetCursorStyle(tcell.CursorStyleBlinkingBlock)
+	case ModeInsert, ModeReplace:
+		e.screen.SetCursorStyle(tcell.CursorStyleBlinkingBar)
+	case ModeCommand, ModeSearch:
+		e.screen.SetCursorStyle(tcell.CursorStyleBlinkingBar)
+	default:
+		e.screen.SetCursorStyle(tcell.CursorStyleDefault)
+	}
 }
 
 // renderPlainLine renders a plain text line.
 func (e *Editor) renderPlainLine(runes []rune, docLine, lineNumWidth, y, textWidth int) {
-	style := tcell.StyleDefault.Foreground(tcell.ColorDefault).Background(tcell.ColorDefault)
+	// Current line background
+	curLineBg := tcell.ColorDefault
+	if docLine == e.cursorRow {
+		curLineBg = e.cursorLineBg
+	}
+	style := tcell.StyleDefault.Foreground(tcell.ColorDefault).Background(curLineBg)
 
 	idx := e.offsetCol
-	for screenX := 0; screenX < textWidth && idx < len(runes); {
+	screenX := 0
+	for screenX = 0; screenX < textWidth && idx < len(runes); {
 		ch := runes[idx]
 		var w int
 		if ch == '\t' {
@@ -1673,12 +1754,18 @@ func (e *Editor) renderPlainLine(runes []rune, docLine, lineNumWidth, y, textWid
 		if e.selStart >= 0 && globalPos >= e.selStart && globalPos <= e.selEnd {
 			style = style.Background(tcell.ColorNavy)
 		} else {
-			style = style.Background(tcell.ColorDefault)
+			style = style.Background(curLineBg)
 		}
 
 		e.screen.SetContent(lineNumWidth+screenX, y, ch, nil, style)
 		screenX += w
 		idx++
+	}
+	// Fill remaining line area with current line bg
+	if curLineBg != tcell.ColorDefault {
+		for x := lineNumWidth + screenX; x < e.termW; x++ {
+			e.screen.SetContent(x, y, ' ', nil, tcell.StyleDefault.Background(curLineBg))
+		}
 	}
 }
 
@@ -1703,8 +1790,15 @@ func buildSearchHlSet(results []int, query string) map[int]struct{} {
 func (e *Editor) renderHighlightedLine(runes []rune, docLine, lineNumWidth, y, textWidth int) {
 	lineStart := e.doc.LineColToPos(docLine, 0)
 
+	// Current line background
+	curLineBg := tcell.ColorDefault
+	if docLine == e.cursorRow {
+		curLineBg = e.cursorLineBg
+	}
+
 	idx := e.offsetCol
-	for screenX := 0; screenX < textWidth && idx < len(runes); {
+	screenX := 0
+	for screenX = 0; screenX < textWidth && idx < len(runes); {
 		ch := runes[idx]
 		var w int
 		if ch == '\t' {
@@ -1726,7 +1820,8 @@ func (e *Editor) renderHighlightedLine(runes []rune, docLine, lineNumWidth, y, t
 		if globalPos >= 0 && globalPos < len(e.runeColors) {
 			fg = e.runeColors[globalPos]
 		}
-		style := tcell.StyleDefault.Foreground(fg).Background(tcell.ColorDefault)
+		bg := curLineBg
+		style := tcell.StyleDefault.Foreground(fg).Background(bg)
 
 		// Check selection
 		sel := false
@@ -1754,6 +1849,12 @@ func (e *Editor) renderHighlightedLine(runes []rune, docLine, lineNumWidth, y, t
 		e.screen.SetContent(lineNumWidth+screenX, y, ch, nil, style)
 		screenX += w
 		idx++
+	}
+	// Fill remaining line area with current line bg
+	if curLineBg != tcell.ColorDefault {
+		for x := lineNumWidth + screenX; x < e.termW; x++ {
+			e.screen.SetContent(x, y, ' ', nil, tcell.StyleDefault.Background(curLineBg))
+		}
 	}
 }
 
@@ -1806,102 +1907,165 @@ func (e *Editor) isMatchingBracket(pos int) bool {
 	return e.findMatchingBracketPos(pos) >= 0
 }
 
-// renderStatusBar renders the status bar.
+// renderStatusBar renders the status bar with segmented, color-coded sections.
 func (e *Editor) renderStatusBar() {
 	y := e.termH - 1
+	bgColor := tcell.ColorBlue
+	fgColor := tcell.ColorWhite
+	baseStyle := tcell.StyleDefault.Foreground(fgColor).Background(bgColor)
 
-	var modeStr string
+	// Command/Search/Replace modes: render input bar
 	switch e.mode {
-	case ModeNormal:
-		modeStr = "NORMAL"
-	case ModeInsert:
-		modeStr = "INSERT"
-	case ModeVisual:
-		modeStr = "VISUAL"
 	case ModeCommand:
-		modeStr = "COMMAND"
+		e.renderInputBar(y, ":"+e.cmdBuffer, baseStyle)
+		return
 	case ModeSearch:
-		modeStr = "SEARCH"
+		prefix := "Search: "
+		if e.searchRegex {
+			prefix = "Regex: "
+		}
+		info := ""
+		if len(e.searchResults) > 0 {
+			info = fmt.Sprintf(" [%d/%d]", e.searchIdx+1, len(e.searchResults))
+		}
+		e.renderInputBar(y, prefix+e.cmdBuffer+info, baseStyle)
+		return
 	case ModeReplace:
-		modeStr = "REPLACE"
+		e.renderInputBar(y, "Replace: "+e.cmdBuffer, baseStyle)
+		return
 	}
 
-	line, col := e.doc.PosToLineCol(e.cursor)
+	// --- Segmented status bar ---
+	// [MODE]  filename [+]  filetype  |  Ln X, Col Y  |  encoding  |  indent  |  percent
+
+	// Mode indicator with mode-specific background
+	var modeStr string
+	var modeBg tcell.Color
+	switch e.mode {
+	case ModeNormal:
+		modeStr = " NORMAL "
+		modeBg = tcell.ColorDarkCyan
+	case ModeInsert:
+		modeStr = " INSERT "
+		modeBg = tcell.ColorDarkGreen
+	case ModeVisual:
+		modeStr = " VISUAL "
+		modeBg = tcell.ColorDarkMagenta
+	default:
+		modeStr = " "
+		modeBg = bgColor
+	}
+
+	// File info
 	fileName := filepath.Base(e.doc.FilePath)
 	if fileName == "" || fileName == "." {
 		fileName = "[No Name]"
 	}
 	modified := ""
 	if e.doc.Modified {
-		modified = " ●"
+		modified = " [+]"
 	}
-	undoCount := e.undo.UndoCount()
-	redoCount := e.undo.RedoCount()
+	fileType := e.fileTypeName()
 
-	// Build status bar text
-	var statusText string
+	// Cursor position
+	line, col := e.doc.PosToLineCol(e.cursor)
+	posStr := fmt.Sprintf("Ln %d, Col %d", line+1, col+1)
 
-	switch e.mode {
-	case ModeCommand:
-		statusText = ":" + e.cmdBuffer
-		// Render command bar
-		for x := 0; x < e.termW && x < len([]rune(statusText)); x++ {
-			ch := []rune(statusText)[x]
-			e.screen.SetContent(x, y, ch, nil, tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue))
-		}
-		// Fill remaining with spaces
-		style := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
-		for x := len([]rune(statusText)); x < e.termW; x++ {
-			e.screen.SetContent(x, y, ' ', nil, style)
-		}
-		return
-
-	case ModeSearch:
-		prefix := "Search: "
-		if e.searchRegex {
-			prefix = "Regex: "
-		}
-		statusText = prefix + e.cmdBuffer
-		style := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
-		for x := 0; x < e.termW && x < len([]rune(statusText)); x++ {
-			ch := []rune(statusText)[x]
-			e.screen.SetContent(x, y, ch, nil, style)
-		}
-		for x := len([]rune(statusText)); x < e.termW; x++ {
-			e.screen.SetContent(x, y, ' ', nil, style)
-		}
-		return
-
-	case ModeReplace:
-		statusText = "Replace: " + e.cmdBuffer
-		style := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
-		for x := 0; x < e.termW && x < len([]rune(statusText)); x++ {
-			ch := []rune(statusText)[x]
-			e.screen.SetContent(x, y, ch, nil, style)
-		}
-		for x := len([]rune(statusText)); x < e.termW; x++ {
-			e.screen.SetContent(x, y, ' ', nil, style)
-		}
-		return
+	// Encoding
+	encStr := "UTF-8"
+	if e.doc.Encoding != document.EncUTF8 && e.doc.Encoding != document.EncUnknown {
+		encStr = e.doc.Encoding.String()
 	}
 
-	// Message mode: display message
-	if e.message != "" && time.Since(e.messageTime) < 5*time.Second {
-		statusText = e.message
+	// Indent
+	indentStr := "Spaces:4"
+	if !e.config.TabToSpaces {
+		indentStr = "Tabs"
+	} else if e.config.TabWidth > 0 {
+		indentStr = fmt.Sprintf("Spaces:%d", e.config.TabWidth)
+	}
+
+	// Scroll percentage
+	totalLines := e.doc.LineCount()
+	var pctStr string
+	if totalLines <= 1 {
+		pctStr = "All"
 	} else {
-		// Build status line based on configuration
-		if e.config.ShowMode {
-			statusText = fmt.Sprintf("%s%s  %s  %d:%d  U:%d R:%d",
-				modeStr, modified, fileName, line+1, col+1, undoCount, redoCount)
-		} else {
-			statusText = fmt.Sprintf("%s%s  %d:%d  U:%d R:%d",
-				modified, fileName, line+1, col+1, undoCount, redoCount)
-		}
+		pct := (line + 1) * 100 / totalLines
+		pctStr = fmt.Sprintf("%d%%", pct)
 	}
 
-	// Render status bar
-	style := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
-	runes := []rune(statusText)
+	// Message (if recent)
+	var msgStr string
+	if e.message != "" && time.Since(e.messageTime) < 5*time.Second {
+		msgStr = e.message
+	}
+
+	// --- Render segments ---
+	x := 0
+
+	// Mode badge
+	modeStyle := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(modeBg).Bold(true)
+	x = e.renderSeg(x, y, modeStr, modeStyle)
+
+	// Separator
+	x = e.renderSeg(x, y, " ", baseStyle)
+
+	// Filename + modified
+	x = e.renderSeg(x, y, fileName+modified, baseStyle.Bold(true))
+
+	// File type
+	if fileType != "" {
+		x = e.renderSeg(x, y, "  "+fileType, baseStyle.Foreground(tcell.ColorAqua))
+	}
+
+	// Separator
+	x = e.renderSeg(x, y, "  \u2502  ", baseStyle.Foreground(tcell.ColorGray))
+
+	// Message area (if active, takes priority over right-aligned info)
+	if msgStr != "" {
+		x = e.renderSeg(x, y, msgStr, baseStyle.Foreground(tcell.ColorYellow))
+	}
+
+	// Build right-aligned section
+	rightStr := fmt.Sprintf("%s  \u2502  %s  \u2502  %s  \u2502  %s",
+		posStr, encStr, indentStr, pctStr)
+	rightRunes := []rune(rightStr)
+	rightX := e.termW - len(rightRunes)
+	if rightX < x+1 {
+		rightX = x + 1
+	}
+
+	// Fill gap between left and right sections
+	for fillX := x; fillX < rightX; fillX++ {
+		e.screen.SetContent(fillX, y, ' ', nil, baseStyle)
+	}
+
+	// Render right-aligned section
+	for i, ch := range rightRunes {
+		st := baseStyle
+		if ch == '\u2502' {
+			st = st.Foreground(tcell.ColorGray)
+		}
+		e.screen.SetContent(rightX+i, y, ch, nil, st)
+	}
+}
+
+// renderSeg renders a text segment at position x on the status bar and returns the new x.
+func (e *Editor) renderSeg(x, y int, text string, style tcell.Style) int {
+	for _, ch := range []rune(text) {
+		if x >= e.termW {
+			break
+		}
+		e.screen.SetContent(x, y, ch, nil, style)
+		x++
+	}
+	return x
+}
+
+// renderInputBar renders a simple input bar (for command/search/replace modes).
+func (e *Editor) renderInputBar(y int, text string, style tcell.Style) {
+	runes := []rune(text)
 	for x := 0; x < e.termW; x++ {
 		ch := rune(' ')
 		if x < len(runes) {
@@ -1909,4 +2073,30 @@ func (e *Editor) renderStatusBar() {
 		}
 		e.screen.SetContent(x, y, ch, nil, style)
 	}
+}
+
+// fileTypeName returns a human-readable name for the current file's language.
+func (e *Editor) fileTypeName() string {
+	if e.hl == nil {
+		return ""
+	}
+	// Extract lexer name from chroma
+	ext := strings.ToLower(filepath.Ext(e.doc.FilePath))
+	if ext == "" {
+		return ""
+	}
+	// Simple mapping for common types
+	nameMap := map[string]string{
+		".go": "Go", ".py": "Python", ".js": "JavaScript", ".jsx": "JSX",
+		".ts": "TypeScript", ".tsx": "TSX", ".rs": "Rust", ".java": "Java",
+		".c": "C", ".h": "C Header", ".cpp": "C++", ".hpp": "C++ Header",
+		".rb": "Ruby", ".sh": "Shell", ".bash": "Bash", ".html": "HTML",
+		".htm": "HTML", ".css": "CSS", ".json": "JSON", ".md": "Markdown",
+		".yaml": "YAML", ".yml": "YAML", ".toml": "TOML", ".xml": "XML",
+		".sql": "SQL", ".vix": "Vix", ".vixl": "Vix",
+	}
+	if name, ok := nameMap[ext]; ok {
+		return name
+	}
+	return strings.TrimPrefix(ext, ".")
 }
