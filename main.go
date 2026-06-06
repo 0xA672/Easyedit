@@ -2,47 +2,46 @@
 //
 // Usage:
 //
-//	easyedit                Open a blank file
-//	easyedit <filename>     Open specified file
+// easyedit                Open a blank file
+// easyedit <filename>     Open specified file
 //
 // Shortcuts:
 //
-//	Ctrl+S    Save
-//	Ctrl+Q    Quit
-//	Ctrl+F    Search
-//	Ctrl+H    Replace
-//	Ctrl+A    Select All
-//	Ctrl+Z    Undo
-//	Ctrl+Y    Redo
-//	Ctrl+X    Cut
-//	Ctrl+C    Copy
-//	Ctrl+V    Paste
-//	Alt+W     Toggle soft wrap
-//	:         Enter command mode
+// Ctrl+S    Save
+// Ctrl+Q    Quit
+// Ctrl+F    Search
+// Ctrl+H    Replace
+// Ctrl+A    Select All
+// Ctrl+Z    Undo
+// Ctrl+Y    Redo
+// Ctrl+X    Cut
+// Ctrl+C    Copy
+// Ctrl+V    Paste
+// Alt+W     Toggle soft wrap
+// :         Enter command mode
 //
 // Command mode (press : to enter):
 //
-//	:q         Quit
-//	:q!        Force quit (no save)
-//	:w         Save
-//	:wq        Save and quit
-//	:w <path>  Save as
-//	:e <path>  Open file
-//	:10,20d    Delete lines 10-20
-//	:%s/old/new/g    Replace all (regex)
-//	:3,5s/old/new    Replace in range
-//	:set nu    Show line numbers
-//	:set nonu  Hide line numbers
-//	:42        Jump to line 42
-//	:uninstall Remove editor binary, config, and backup files
+// :q         Quit
+// :q!        Force quit (no save)
+// :w         Save
+// :wq        Save and quit
+// :w <path>  Save as
+// :e <path>  Open file
+// :10,20d    Delete lines 10-20
+// :%s/old/new/g    Replace all
+// :3,5s/old/new    Replace in range
+// :set nu    Show line numbers
+// :set nonu  Hide line numbers
+// :42        Jump to line 42
+// :uninstall Remove editor binary, config, and backup files
 //
 // Config file (auto-loaded):
 //
-//	Linux/macOS: ~/.easyedit.toml
-//	Windows:     %APPDATA%/easyedit/config.toml
+// Linux/macOS: ~/.easyedit.toml
+// Windows:     %APPDATA%/easyedit/config.toml
 //
 // Dependencies:
-//
 //   - github.com/gdamore/tcell/v2      (terminal handling)
 //   - github.com/alecthomas/chroma/v2   (syntax highlighting)
 //   - github.com/atotto/clipboard       (system clipboard)
@@ -55,8 +54,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
-	"regexp"
 	"runtime/debug"
 	"strings"
 
@@ -69,6 +66,7 @@ import (
 //  3. "0.2.0-dev" — hardcoded fallback
 var Version = "0.2.0-dev"
 
+// init 初始化编辑器版本信息，优先从构建信息中获取版本号，其次使用链接时注入的版本，最后使用硬编码的默认版本。
 func init() {
 	if info, ok := debug.ReadBuildInfo(); ok {
 		v := info.Main.Version
@@ -78,33 +76,22 @@ func init() {
 	}
 }
 
-// stringSliceFlag allows multiple -e options.
-type stringSliceFlag []string
-
-func (s *stringSliceFlag) String() string {
-	return strings.Join(*s, ", ")
-}
-
-func (s *stringSliceFlag) Set(value string) error {
-	*s = append(*s, value)
-	return nil
-}
-
+// main 程序的入口函数，处理命令行参数，初始化编辑器实例，启动编辑器主循环。
 func main() {
 	showVersion := flag.Bool("version", false, "print version and exit")
 	showHelp := flag.Bool("help", false, "print this help message")
 	streamMode := flag.Bool("s", false, "stream mode: read from stdin, apply edits, write to stdout (sed-like)")
 	streamModeLong := flag.Bool("stream", false, "stream mode: read from stdin, apply edits, write to stdout (sed-like)")
-
-	var editScripts stringSliceFlag
-	flag.Var(&editScripts, "e", "edit script to apply in stream mode (e.g., 's/old/new/g'). May be repeated.")
-
+	editScript := flag.String("e", "", "edit script to apply in stream mode (e.g., 's/old/new/g')")
 	inPlace := flag.Bool("i", false, "in-place editing (used with -s)")
-
 	flag.Usage = printUsage
 	flag.Parse()
-
-	// --version and --help always work, even with -s
+	// Check if stream mode is enabled
+	isStream := *streamMode || *streamModeLong
+	if isStream {
+		runStreamMode(*editScript, *inPlace)
+		return
+	}
 	if *showVersion {
 		fmt.Printf("EasyEdit %s\n", Version)
 		os.Exit(0)
@@ -113,14 +100,8 @@ func main() {
 		printUsage()
 		os.Exit(0)
 	}
-
-	isStream := *streamMode || *streamModeLong
-	if isStream {
-		runStreamMode(editScripts, *inPlace)
-		return
-	}
-
 	editor := ui.NewEditor()
+	// If a positional argument is provided, open that file
 	if args := flag.Args(); len(args) > 0 {
 		filePath := args[0]
 		if err := editor.OpenFile(filePath); err != nil {
@@ -134,251 +115,112 @@ func main() {
 	}
 }
 
-// runStreamMode processes input line by line, applying sed-like rules.
-// It handles both stdin → stdout and in‑place file editing atomically.
-func runStreamMode(scripts []string, inPlace bool) {
-	if len(scripts) == 0 {
-		fmt.Fprintln(os.Stderr, "Error: at least one -e flag is required in stream mode")
+// runStreamMode 运行流模式，提供类似sed的批量编辑能力，从输入读取内容，应用编辑脚本后输出结果，支持原地修改文件。
+func runStreamMode(script string, inPlace bool) {
+	if script == "" {
+		fmt.Fprintln(os.Stderr, "Error: -e flag is required in stream mode")
 		os.Exit(1)
 	}
-
-	// Parse each script into an internal Rule
-	var rules []Rule
-	for _, scr := range scripts {
-		parsed, err := parseRule(scr)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing script %q: %v\n", scr, err)
-			os.Exit(1)
-		}
-		rules = append(rules, parsed)
-	}
-
+	// Parse the script (simple sed-like syntax for now)
+	// Supports: s/old/new/g, s/old/new/, d (delete lines matching pattern)
+	rules := parseScript(script)
 	if inPlace {
+		// Read from file argument
 		args := flag.Args()
 		if len(args) == 0 {
 			fmt.Fprintln(os.Stderr, "Error: filename required for in-place editing")
 			os.Exit(1)
 		}
 		filename := args[0]
-
-		// Process the file line by line into a temporary file
-		tmpFile, err := os.CreateTemp(filepath.Dir(filename), ".easyedit-*.tmp")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating temp file: %v\n", err)
-			os.Exit(1)
-		}
-		tmpPath := tmpFile.Name()
-		defer os.Remove(tmpPath) // clean up on failure
-
-		// Open input file
-		inFile, err := os.Open(filename)
+		// Read file content
+		content, err := os.ReadFile(filename)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
 			os.Exit(1)
 		}
-		defer inFile.Close()
-
-		scanner := bufio.NewScanner(inFile)
-		writer := bufio.NewWriter(tmpFile)
-
-		// Process line by line
-		for scanner.Scan() {
-			line := scanner.Text()
-			newLine := applyRulesToLine(line, rules)
-			if _, err := writer.WriteString(newLine + "\n"); err != nil {
-				fmt.Fprintf(os.Stderr, "Error writing to temp file: %v\n", err)
-				os.Exit(1)
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
-			os.Exit(1)
-		}
-		writer.Flush()
-		tmpFile.Close()
-
-		// Atomic replace: rename temp file to original
-		if err := os.Rename(tmpPath, filename); err != nil {
-			fmt.Fprintf(os.Stderr, "Error replacing file: %v\n", err)
+		// Apply rules
+		result := applyRules(string(content), rules)
+		// Write back to file
+		if err := os.WriteFile(filename, []byte(result), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
-		// Read from stdin, write to stdout (line by line)
+		// Read from stdin, write to stdout
 		scanner := bufio.NewScanner(os.Stdin)
+		var input strings.Builder
 		for scanner.Scan() {
-			line := scanner.Text()
-			newLine := applyRulesToLine(line, rules)
-			fmt.Println(newLine)
+			input.WriteString(scanner.Text() + "\n")
 		}
 		if err := scanner.Err(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
 			os.Exit(1)
 		}
+		// Apply rules
+		result := applyRules(input.String(), rules)
+		// Write to stdout (trim trailing newline added by loop)
+		fmt.Print(strings.TrimSuffix(result, "\n"))
 	}
 }
 
-// Rule represents one sed‑like command: either a substitution or a delete.
-type Rule struct {
-	IsDelete bool
-	// For substitution
-	Pattern *regexp.Regexp
-	Repl    string
-	Global  bool
-	// For delete
-	DeletePattern *regexp.Regexp
+// parseScript 解析编辑脚本，将输入的脚本按分隔符分割为多个独立的编辑规则，支持分号或换行分隔多个命令。
+func parseScript(script string) []string {
+	// Simple parser: split by semicolon or handle multiple -e flags
+	// For now, treat the whole script as one rule or split by common delimiters
+	var rules []string
+	// Handle multiple commands separated by semicolons or newlines
+	parts := strings.FieldsFunc(script, func(r rune) bool {
+		return r == ';' || r == '\n'
+	})
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			rules = append(rules, part)
+		}
+	}
+	return rules
 }
 
-// parseRule parses a single sed‑style command.
-// Supported forms:
-//
-//	s/pattern/replacement/flags   (any delimiter, e.g. s|a|b|)
-//	/pattern/d                    (delete lines matching pattern)
-//
-// Flags: 'g' for global replacement.
-// Delimiter is the first character after 's' (or after the slash for delete).
-// Escaped delimiters inside pattern/replacement are supported (e.g. s/\/foo/bar/).
-func parseRule(script string) (Rule, error) {
-	script = strings.TrimSpace(script)
-	if len(script) < 3 {
-		return Rule{}, fmt.Errorf("too short")
-	}
-
-	// Delete command: /pattern/d
-	if script[0] == '/' && strings.HasSuffix(script, "/d") {
-		delim := '/'
-		// Find closing delimiter before the trailing "/d"
-		endIdx := len(script) - 2 // position of the slash before 'd'
-		pattern, err := unescapeDelimited(script[1:endIdx], delim)
-		if err != nil {
-			return Rule{}, fmt.Errorf("invalid delete pattern: %v", err)
-		}
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			return Rule{}, fmt.Errorf("invalid regex in delete: %v", err)
-		}
-		return Rule{IsDelete: true, DeletePattern: re}, nil
-	}
-
-	// Substitute command: s<delim>pattern<delim>replacement<delim>flags
-	if script[0] != 's' {
-		return Rule{}, fmt.Errorf("unsupported command, expected 's' or '/pattern/d'")
-	}
-	if len(script) < 4 {
-		return Rule{}, fmt.Errorf("substitution command too short")
-	}
-	delim := rune(script[1])
-	// Find the three occurrences of the delimiter, respecting escapes
-	parts, err := splitDelimited(script[2:], delim)
-	if err != nil || len(parts) < 2 {
-		return Rule{}, fmt.Errorf("invalid substitution syntax: missing delimiters")
-	}
-	pattern := parts[0]
-	replacement := parts[1]
-	flags := ""
-	if len(parts) > 2 {
-		flags = parts[2]
-	}
-	global := strings.Contains(flags, "g")
-
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return Rule{}, fmt.Errorf("invalid regex: %v", err)
-	}
-	return Rule{
-		IsDelete: false,
-		Pattern:  re,
-		Repl:     replacement,
-		Global:   global,
-	}, nil
-}
-
-// splitDelimited splits a string by the given delimiter, respecting backslash escapes.
-// Returns a slice of substrings between delimiters (excluding the delimiters themselves).
-// Example: splitDelimited("foo/bar/baz", '/') -> ["foo", "bar", "baz"]
-func splitDelimited(s string, delim rune) ([]string, error) {
-	var parts []string
-	var cur strings.Builder
-	escaped := false
-	for _, ch := range s {
-		if !escaped && ch == delim {
-			parts = append(parts, cur.String())
-			cur.Reset()
-			continue
-		}
-		if !escaped && ch == '\\' {
-			escaped = true
-			continue
-		}
-		if escaped {
-			// add the escaped character literally (including the backslash? No, sed unescapes)
-			cur.WriteRune(ch)
-			escaped = false
-		} else {
-			cur.WriteRune(ch)
-		}
-	}
-	if escaped {
-		return nil, fmt.Errorf("unterminated escape")
-	}
-	// Last part after final delimiter may be empty (flags)
-	parts = append(parts, cur.String())
-	return parts, nil
-}
-
-// unescapeDelimited removes backslashes used to escape the delimiter inside a pattern.
-// E.g., unescapeDelimited("foo\/bar", '/') -> "foo/bar"
-func unescapeDelimited(s string, delim rune) (string, error) {
-	var out strings.Builder
-	escaped := false
-	for _, ch := range s {
-		if !escaped && ch == '\\' {
-			escaped = true
-			continue
-		}
-		if escaped {
-			if ch == delim || ch == '\\' {
-				out.WriteRune(ch)
-			} else {
-				out.WriteRune('\\')
-				out.WriteRune(ch)
-			}
-			escaped = false
-		} else {
-			out.WriteRune(ch)
-		}
-	}
-	if escaped {
-		return "", fmt.Errorf("unterminated escape")
-	}
-	return out.String(), nil
-}
-
-// applyRulesToLine applies all rules to a single line and returns the result.
-// For substitution rules, it performs either first-match or global replacement.
-// For delete rules, it returns an empty string if the line matches, otherwise unchanged.
-func applyRulesToLine(line string, rules []Rule) string {
+// applyRules 将解析后的编辑规则应用到输入内容上，支持字符串替换、匹配行删除等sed风格的编辑操作。
+func applyRules(content string, rules []string) string {
+	result := content
 	for _, rule := range rules {
-		if rule.IsDelete {
-			if rule.DeletePattern.MatchString(line) {
-				return "" // line will be omitted (caller handles newline)
-			}
-		} else {
-			if rule.Global {
-				line = rule.Pattern.ReplaceAllString(line, rule.Repl)
-			} else {
-				// Replace only the first match
-				idx := rule.Pattern.FindStringIndex(line)
-				if idx != nil {
-					line = line[:idx[0]] + rule.Pattern.ReplaceAllString(line[idx[0]:idx[1]], rule.Repl) + line[idx[1]:]
+		// Parse sed-like syntax: s/pattern/replacement/flags
+		if strings.HasPrefix(rule, "s/") {
+			parts := strings.SplitN(rule[2:], "/", 3)
+			if len(parts) >= 3 {
+				pattern := parts[0]
+				replacement := parts[1]
+				flags := ""
+				if len(parts) == 3 {
+					flags = parts[2]
+				}
+				// Simple string replacement (not full regex for safety)
+				if strings.Contains(flags, "g") {
+					result = strings.ReplaceAll(result, pattern, replacement)
+				} else {
+					result = strings.Replace(result, pattern, replacement, 1)
 				}
 			}
+		} else if strings.HasPrefix(rule, "/") && strings.HasSuffix(rule, "/d") && len(rule) > 2 {
+			// Delete lines matching pattern: /pattern/d
+			pattern := rule[1 : len(rule)-2]
+			lines := strings.Split(result, "\n")
+			var filtered []string
+			for _, line := range lines {
+				if !strings.Contains(line, pattern) {
+					filtered = append(filtered, line)
+				}
+			}
+			result = strings.Join(filtered, "\n")
 		}
 	}
-	return line
+	return result
 }
 
-// printUsage prints localized help text.
+// printUsage 打印程序的使用帮助信息，会根据系统语言自动选择中文或英文的帮助内容，适配不同语言的用户。
 func printUsage() {
+	// Detect system language for localized help
 	lang := os.Getenv("LANG")
 	isZh := len(lang) >= 2 && lang[:2] == "zh"
 	if isZh {
@@ -391,7 +233,7 @@ func printUsage() {
   --help       打印此帮助信息
   --version    打印版本并退出
   -s, --stream 流模式：从 stdin 读取，应用编辑规则后输出到 stdout（sed 平替）
-  -e <script>  指定编辑脚本（可以多次使用 -e）
+  -e <script>  指定编辑脚本（与 -s 一起使用）
   -i           原地修改文件（与 -s 一起使用）
 示例:
   easyedit              打开空白文件
@@ -399,8 +241,6 @@ func printUsage() {
   echo "hello foo" | easyedit -s -e 's/foo/bar/g'
   cat input.txt | easyedit -s -e 's/old/new/g' > output.txt
   easyedit -s -i -e 's/a/b/g' config.txt
-  easyedit -s -e '/^#/d' -e 's/foo/bar/g' file.txt
-
 键位绑定（在编辑器内）:
   Ctrl+S    保存        Ctrl+Q    退出
   Ctrl+F    搜索        Ctrl+H    替换
@@ -408,7 +248,6 @@ func printUsage() {
   Ctrl+X    剪切        Ctrl+C    复制        Ctrl+V    粘贴
   Ctrl+A    全选        Alt+W     切换软换行
   :         进入命令模式
-
 命令 (: 模式):
   :q        退出           :q!       强制退出
   :w        保存           :w <path> 另存为
@@ -428,16 +267,14 @@ Flags:
   --help         Print this help message
   --version      Print version and exit
   -s, --stream   Stream mode: read from stdin, apply edits, write to stdout (sed alternative)
-  -e <script>    Edit script to apply (can be used multiple times)
+  -e <script>    Edit script to apply (used with -s)
   -i             In-place file editing (used with -s)
-Examples:
+  Examples:
   easyedit                              Open a blank file
   easyedit main.go                      Open main.go for editing
   echo "hello foo" | easyedit -s -e 's/foo/bar/g'
   cat input.txt | easyedit -s -e 's/old/new/g' > output.txt
   easyedit -s -i -e 's/a/b/g' config.txt
-  easyedit -s -e '/^#/d' -e 's/foo/bar/g' file.txt
-
 Keybindings (inside the editor):
   Ctrl+S    Save        Ctrl+Q    Quit
   Ctrl+F    Search      Ctrl+H    Replace
@@ -445,7 +282,6 @@ Keybindings (inside the editor):
   Ctrl+X    Cut         Ctrl+C    Copy        Ctrl+V    Paste
   Ctrl+A    Select All  Alt+W     Toggle soft wrap
   :         Enter command mode
-
 Commands (: mode):
   :q        Quit           :q!       Force quit
   :w        Save           :w <path> Save as

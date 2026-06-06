@@ -98,6 +98,10 @@ type Editor struct {
 	lastContent string         // Text from last render
 	hlTokens    []chroma.Token // Cached tokenization result
 	runeColors  []tcell.Color  // Foreground color per rune position (0=default)
+
+	// Per-frame render caches (recomputed once in render())
+	searchHlSet    map[int]struct{} // Set of rune positions highlighted by search
+	matchBrackPos  int              // Position of bracket matching cursor (-1 if none)
 }
 
 // Token type alias for convenience.
@@ -1583,6 +1587,18 @@ func (e *Editor) render() {
 		e.rebuildRuneColors(content)
 	}
 
+	// Pre-compute search highlight set (O(results) once, O(1) lookup per char)
+	e.searchHlSet = buildSearchHlSet(e.searchResults, e.searchQuery)
+
+	// Pre-compute matching bracket position (O(n) once, O(1) check per char)
+	e.matchBrackPos = -1
+	if e.cursor < e.doc.Len() {
+		ch := e.doc.Buffer.RuneAt(e.cursor)
+		if highlight.IsBracket(ch) {
+			e.matchBrackPos = e.findMatchingBracketPos(e.cursor)
+		}
+	}
+
 	lineNumWidth := e.lineNumWidth()
 	textWidth := e.termW - lineNumWidth
 	if textWidth < 1 {
@@ -1666,6 +1682,22 @@ func (e *Editor) renderPlainLine(runes []rune, docLine, lineNumWidth, y, textWid
 	}
 }
 
+// buildSearchHlSet pre-computes a set of all rune positions that should be
+// highlighted as search matches. Returns nil when there are no results.
+func buildSearchHlSet(results []int, query string) map[int]struct{} {
+	if len(results) == 0 || query == "" {
+		return nil
+	}
+	qlen := len([]rune(query))
+	set := make(map[int]struct{}, len(results)*qlen)
+	for _, pos := range results {
+		for i := 0; i < qlen; i++ {
+			set[pos+i] = struct{}{}
+		}
+	}
+	return set
+}
+
 // renderHighlightedLine renders a syntax highlighted line.
 // Uses pre-cached runeColors from render() for coloring.
 func (e *Editor) renderHighlightedLine(runes []rune, docLine, lineNumWidth, y, textWidth int) {
@@ -1703,37 +1735,19 @@ func (e *Editor) renderHighlightedLine(runes []rune, docLine, lineNumWidth, y, t
 			style = style.Background(tcell.ColorNavy)
 		}
 
-		// Bracket match highlight (check only cursor bracket)
-		if !sel && globalPos == e.cursor && highlight.IsBracket(ch) && e.isMatchingBracket(globalPos) {
-			style = style.Foreground(tcell.ColorGreen).Background(tcell.ColorDarkCyan)
-		}
-
-		// Highlight matching bracket when cursor is on a bracket
-		if !sel && globalPos != e.cursor && highlight.IsBracket(ch) {
-			// Check if cursor is on a bracket, and current char pairs with cursor bracket
-			cursorCh := e.doc.Buffer.RuneAt(e.cursor)
-			if cursorCh != 0 && highlight.IsBracket(cursorCh) {
-				match := highlight.MatchingBracket(cursorCh)
-				if ch == match {
-					// Check if it's actually a matching pair
-					if e.isMatchingBracket(e.cursor) {
-						// Verify current char pairs with cursor bracket
-						match2 := highlight.MatchingBracket(ch)
-						if match2 == cursorCh {
-							style = style.Foreground(tcell.ColorGreen).Background(tcell.ColorDarkCyan)
-						}
-					}
-				}
+		// Bracket match highlight (O(1) using pre-computed matchBrackPos)
+		if !sel && highlight.IsBracket(ch) {
+			if globalPos == e.cursor && e.matchBrackPos >= 0 {
+				style = style.Foreground(tcell.ColorGreen).Background(tcell.ColorDarkCyan)
+			} else if globalPos == e.matchBrackPos {
+				style = style.Foreground(tcell.ColorGreen).Background(tcell.ColorDarkCyan)
 			}
 		}
 
-		// Search match highlight
-		if e.searchResults != nil && !sel {
-			for _, pos := range e.searchResults {
-				if globalPos >= pos && globalPos < pos+len([]rune(e.searchQuery)) {
-					style = style.Background(tcell.ColorYellow).Foreground(tcell.ColorBlack)
-					break
-				}
+		// Search match highlight (O(1) lookup using pre-computed set)
+		if e.searchHlSet != nil && !sel {
+			if _, hit := e.searchHlSet[globalPos]; hit {
+				style = style.Background(tcell.ColorYellow).Foreground(tcell.ColorBlack)
 			}
 		}
 
@@ -1752,18 +1766,18 @@ func (e *Editor) tabVisualWidth(screenX int) int {
 	return tw - (screenX % tw)
 }
 
-// isMatchingBracket checks if a matching bracket exists at position pos.
-func (e *Editor) isMatchingBracket(pos int) bool {
+// findMatchingBracketPos returns the position of the bracket matching the one
+// at pos, or -1 if no match exists. This is the O(n) scan called once per frame.
+func (e *Editor) findMatchingBracketPos(pos int) int {
 	ch := e.doc.Buffer.RuneAt(pos)
 	if ch == 0 {
-		return false
+		return -1
 	}
 	match := highlight.MatchingBracket(ch)
 	if match == 0 {
-		return false
+		return -1
 	}
 
-	// Scan forward or backward
 	direction := 1
 	if ch == ')' || ch == ']' || ch == '}' {
 		direction = -1
@@ -1777,13 +1791,19 @@ func (e *Editor) isMatchingBracket(pos int) bool {
 			depth++
 		} else if c == match {
 			if depth == 0 {
-				return true
+				return p
 			}
 			depth--
 		}
 		p += direction
 	}
-	return false
+	return -1
+}
+
+// isMatchingBracket checks if a matching bracket exists at position pos.
+// Deprecated: use matchBrackPos pre-computed in render() for O(1) checks.
+func (e *Editor) isMatchingBracket(pos int) bool {
+	return e.findMatchingBracketPos(pos) >= 0
 }
 
 // renderStatusBar renders the status bar.

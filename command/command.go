@@ -234,8 +234,12 @@ func parseCmdName(rest string) (CmdKind, []string, string) {
 		return CmdDelete, nil, suffix
 	case 's':
 		// Check for set command
-		if strings.HasPrefix(strings.ToLower(rest), "se") || strings.HasPrefix(strings.ToLower(rest), "set") {
+		lower := strings.ToLower(rest)
+		if strings.HasPrefix(lower, "set") && len(rest) >= 3 {
 			return CmdSet, nil, rest[3:]
+		}
+		if lower == "se" {
+			return CmdSet, nil, ""
 		}
 		// s command: keep the rest for parseSubstitute
 		return CmdSubstitute, nil, rest[1:]
@@ -243,7 +247,10 @@ func parseCmdName(rest string) (CmdKind, []string, string) {
 	// Multi-letter commands that start with letters already claimed above
 	case 'u':
 		if strings.ToLower(rest) == "uninstall" {
-			return CmdUninstall, nil, rest[9:]
+			if len(rest) > 9 {
+				return CmdUninstall, nil, rest[9:]
+			}
+			return CmdUninstall, nil, ""
 		}
 		return CmdNone, nil, rest
 	}
@@ -378,11 +385,14 @@ func (c *Command) String() string {
 		sb.WriteString("e ")
 		sb.WriteString(strings.Join(c.Args, " "))
 	case CmdSet:
-		sb.WriteString("set ")
-		sb.WriteString(c.SetOpt.Name)
-		if c.SetOpt.Value != "" {
-			sb.WriteString("=")
-			sb.WriteString(c.SetOpt.Value)
+		sb.WriteString("set")
+		if c.SetOpt != nil {
+			sb.WriteString(" ")
+			sb.WriteString(c.SetOpt.Name)
+			if c.SetOpt.Value != "" {
+				sb.WriteString("=")
+				sb.WriteString(c.SetOpt.Value)
+			}
 		}
 	case CmdUninstall:
 		sb.WriteString("uninstall")
