@@ -127,4 +127,3 @@ func chromaTypeFromInt(n int) chroma.TokenType {
 	}
 	return types[n%len(types)]
 }
-

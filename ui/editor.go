@@ -100,8 +100,8 @@ type Editor struct {
 	runeColors  []tcell.Color  // Foreground color per rune position (0=default)
 
 	// Per-frame render caches (recomputed once in render())
-	searchHlSet    map[int]struct{} // Set of rune positions highlighted by search
-	matchBrackPos  int              // Position of bracket matching cursor (-1 if none)
+	searchHlSet   map[int]struct{} // Set of rune positions highlighted by search
+	matchBrackPos int              // Position of bracket matching cursor (-1 if none)
 }
 
 // Token type alias for convenience.
@@ -114,7 +114,7 @@ func NewEditor() *Editor {
 	if cfg.VimMode {
 		initialMode = ModeNormal
 	}
-	
+
 	e := &Editor{
 		config:    cfg,
 		doc:       document.NewDocument(),
@@ -609,7 +609,7 @@ func (e *Editor) moveWordBackward() {
 		e.cursor--
 	}
 	for e.cursor > 0 {
-		ch := e.doc.Buffer.RuneAt(e.cursor-1)
+		ch := e.doc.Buffer.RuneAt(e.cursor - 1)
 		if ch == ' ' || ch == '\t' || ch == '\n' {
 			break
 		}

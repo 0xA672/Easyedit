@@ -44,17 +44,17 @@ type Theme struct {
 
 // Config is the editor configuration struct.
 type Config struct {
-	Theme        Theme       `toml:"theme"`
-	Keys         KeyBindings `toml:"keys"`
-	TabWidth     int         `toml:"tab_width"`      // Indent width, default 4
-	ShowLineNum  bool        `toml:"show_line_num"`  // Show line numbers, default true
-	ShowMode     bool        `toml:"show_mode"`      // Show mode indicator in status bar, default true
-	Backup       bool        `toml:"backup"`         // Create .bak backup, default true
-	SoftWrap     bool        `toml:"soft_wrap"`      // Enable soft wrap, default true
-	AutoIndent   bool        `toml:"auto_indent"`    // Enable auto-indent, default true
-	UndoLimit    int         `toml:"undo_limit"`     // Undo step limit, default 100
-	TabToSpaces  bool        `toml:"tab_to_spaces"`  // Convert tab to spaces, default true
-	VimMode      bool        `toml:"vim_mode"`       // Enable Vim-style modes, default false (legacy behavior)
+	Theme       Theme       `toml:"theme"`
+	Keys        KeyBindings `toml:"keys"`
+	TabWidth    int         `toml:"tab_width"`     // Indent width, default 4
+	ShowLineNum bool        `toml:"show_line_num"` // Show line numbers, default true
+	ShowMode    bool        `toml:"show_mode"`     // Show mode indicator in status bar, default true
+	Backup      bool        `toml:"backup"`        // Create .bak backup, default true
+	SoftWrap    bool        `toml:"soft_wrap"`     // Enable soft wrap, default true
+	AutoIndent  bool        `toml:"auto_indent"`   // Enable auto-indent, default true
+	UndoLimit   int         `toml:"undo_limit"`    // Undo step limit, default 100
+	TabToSpaces bool        `toml:"tab_to_spaces"` // Convert tab to spaces, default true
+	VimMode     bool        `toml:"vim_mode"`      // Enable Vim-style modes, default false (legacy behavior)
 }
 
 // defaultConfig returns the default configuration.

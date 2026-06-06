@@ -120,11 +120,11 @@ func FuzzDetectEncoding(f *testing.F) {
 	seeds := [][]byte{
 		{},
 		{0xEF, 0xBB, 0xBF, 'h', 'e', 'l', 'l', 'o'}, // UTF-8 BOM
-		{0xFF, 0xFE, 'h', 0, 'i', 0},                  // UTF-16LE BOM
-		{0xFE, 0xFF, 0, 'h', 0, 'i'},                  // UTF-16BE BOM
-		[]byte("hello world"),                          // plain ASCII
-		[]byte("你好世界"),                               // UTF-8 CJK
-		{0x80, 0x81, 0x82},                             // invalid UTF-8
+		{0xFF, 0xFE, 'h', 0, 'i', 0},                // UTF-16LE BOM
+		{0xFE, 0xFF, 0, 'h', 0, 'i'},                // UTF-16BE BOM
+		[]byte("hello world"),                       // plain ASCII
+		[]byte("你好世界"),                              // UTF-8 CJK
+		{0x80, 0x81, 0x82},                          // invalid UTF-8
 	}
 	for _, s := range seeds {
 		f.Add(s)
