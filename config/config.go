@@ -40,8 +40,9 @@ type Theme struct {
 	StatusBarBg   string `toml:"statusbar_bg"`    // Status bar background
 	SearchMatchBg string `toml:"search_match_bg"` // Search match highlight background
 	BracketMatch  string `toml:"bracket_match"`   // Bracket match highlight foreground
-	SelectionBg   string `toml:"selection_bg"`    // Selection background
-	CursorLineBg  string `toml:"cursor_line_bg"`  // Current line background highlight
+	SelectionBg   string `toml:"selection_bg"`     // Selection background
+	CursorLineBg  string `toml:"cursor_line_bg"`   // Current line background highlight
+	WhitespaceFg  string `toml:"whitespace_fg"`    // Whitespace glyph foreground color
 }
 
 // Config is the editor configuration struct.
@@ -56,8 +57,9 @@ type Config struct {
 	AutoIndent   bool        `toml:"auto_indent"`   // Enable auto-indent, default true
 	UndoLimit    int         `toml:"undo_limit"`    // Undo step limit, default 100
 	TabToSpaces  bool        `toml:"tab_to_spaces"` // Convert tab to spaces, default true
-	VimMode      bool        `toml:"vim_mode"`      // Enable Vim-style modes, default false (legacy behavior)
-	ScrollMargin int         `toml:"scroll_margin"` // Lines to keep above/below cursor, default 3
+	VimMode        bool `toml:"vim_mode"`          // Enable Vim-style modes, default false (legacy behavior)
+	ScrollMargin   int  `toml:"scroll_margin"`     // Lines to keep above/below cursor, default 3
+	ShowWhitespace bool `toml:"show_whitespace"`   // Show whitespace characters (space, tab, newline), default false
 }
 
 // defaultConfig returns the default configuration.
@@ -71,8 +73,9 @@ func defaultConfig() Config {
 		AutoIndent:   true,
 		UndoLimit:    100,
 		TabToSpaces:  true,
-		VimMode:      false, // Default to legacy behavior for backward compatibility
-		ScrollMargin: 3,
+		VimMode:        false, // Default to legacy behavior for backward compatibility
+		ScrollMargin:   3,
+		ShowWhitespace: false,
 		Theme: Theme{
 			DefaultFg:     "default",
 			DefaultBg:     "default",
@@ -85,6 +88,7 @@ func defaultConfig() Config {
 			BracketMatch:  "green",
 			SelectionBg:   "navy",
 			CursorLineBg:  "#2a2a2a",
+			WhitespaceFg:  "#555555",
 		},
 		Keys: KeyBindings{
 			Save:        "Ctrl+S",

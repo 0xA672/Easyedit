@@ -106,6 +106,7 @@ type Editor struct {
 	// Cached theme colors (parsed once from config)
 	cursorLineBg tcell.Color // Background color for current line
 	lineNumCurFg tcell.Color // Foreground color for current line number
+	whitespaceFg tcell.Color // Foreground color for whitespace glyphs
 }
 
 // Token type alias for convenience.
@@ -132,6 +133,7 @@ func NewEditor() *Editor {
 	e.hl = highlight.NewHighlighter("")
 	e.cursorLineBg = tcell.GetColor(cfg.Theme.CursorLineBg)
 	e.lineNumCurFg = tcell.GetColor(cfg.Theme.LineNumCurFg)
+	e.whitespaceFg = tcell.GetColor(cfg.Theme.WhitespaceFg)
 	return e
 }
 
@@ -1730,7 +1732,7 @@ func (e *Editor) renderPlainLine(runes []rune, docLine, lineNumWidth, y, textWid
 	if docLine == e.cursorRow {
 		curLineBg = e.cursorLineBg
 	}
-	style := tcell.StyleDefault.Foreground(tcell.ColorDefault).Background(curLineBg)
+	showWS := e.config.ShowWhitespace
 
 	idx := e.offsetCol
 	screenX := 0
@@ -1751,15 +1753,41 @@ func (e *Editor) renderPlainLine(runes []rune, docLine, lineNumWidth, y, textWid
 
 		// Check selection
 		globalPos := e.doc.LineColToPos(docLine, idx)
+		bg := curLineBg
 		if e.selStart >= 0 && globalPos >= e.selStart && globalPos <= e.selEnd {
-			style = style.Background(tcell.ColorNavy)
-		} else {
-			style = style.Background(curLineBg)
+			bg = tcell.ColorNavy
 		}
 
-		e.screen.SetContent(lineNumWidth+screenX, y, ch, nil, style)
+		// Determine displayed character and foreground color
+		dispCh := ch
+		fg := tcell.ColorDefault
+		if showWS {
+			switch ch {
+			case ' ':
+				dispCh = '\u00B7' // middle dot
+				fg = e.whitespaceFg
+			case '\t':
+				dispCh = '\u2192' // right arrow
+				fg = e.whitespaceFg
+			}
+		}
+
+		style := tcell.StyleDefault.Foreground(fg).Background(bg)
+
+		// Render the character cell
+		e.screen.SetContent(lineNumWidth+screenX, y, dispCh, nil, style)
+		// Fill remaining cells for wide/tab characters with same background
+		for fill := 1; fill < w; fill++ {
+			e.screen.SetContent(lineNumWidth+screenX+fill, y, ' ', nil, style)
+		}
 		screenX += w
 		idx++
+	}
+	// Render newline pilcrow at end of line
+	if showWS && screenX < textWidth {
+		pilcrowStyle := tcell.StyleDefault.Foreground(e.whitespaceFg).Background(curLineBg)
+		e.screen.SetContent(lineNumWidth+screenX, y, '\u00B6', nil, pilcrowStyle)
+		screenX++
 	}
 	// Fill remaining line area with current line bg
 	if curLineBg != tcell.ColorDefault {
@@ -1795,6 +1823,7 @@ func (e *Editor) renderHighlightedLine(runes []rune, docLine, lineNumWidth, y, t
 	if docLine == e.cursorRow {
 		curLineBg = e.cursorLineBg
 	}
+	showWS := e.config.ShowWhitespace
 
 	idx := e.offsetCol
 	screenX := 0
@@ -1821,14 +1850,28 @@ func (e *Editor) renderHighlightedLine(runes []rune, docLine, lineNumWidth, y, t
 			fg = e.runeColors[globalPos]
 		}
 		bg := curLineBg
-		style := tcell.StyleDefault.Foreground(fg).Background(bg)
 
 		// Check selection
 		sel := false
 		if e.selStart >= 0 && globalPos >= e.selStart && globalPos <= e.selEnd {
 			sel = true
-			style = style.Background(tcell.ColorNavy)
+			bg = tcell.ColorNavy
 		}
+
+		// Whitespace glyphs override foreground when enabled
+		dispCh := ch
+		if showWS {
+			switch ch {
+			case ' ':
+				dispCh = '\u00B7' // middle dot
+				fg = e.whitespaceFg
+			case '\t':
+				dispCh = '\u2192' // right arrow
+				fg = e.whitespaceFg
+			}
+		}
+
+		style := tcell.StyleDefault.Foreground(fg).Background(bg)
 
 		// Bracket match highlight (O(1) using pre-computed matchBrackPos)
 		if !sel && highlight.IsBracket(ch) {
@@ -1846,9 +1889,20 @@ func (e *Editor) renderHighlightedLine(runes []rune, docLine, lineNumWidth, y, t
 			}
 		}
 
-		e.screen.SetContent(lineNumWidth+screenX, y, ch, nil, style)
+		// Render the character cell
+		e.screen.SetContent(lineNumWidth+screenX, y, dispCh, nil, style)
+		// Fill remaining cells for wide/tab characters with same background
+		for fill := 1; fill < w; fill++ {
+			e.screen.SetContent(lineNumWidth+screenX+fill, y, ' ', nil, style)
+		}
 		screenX += w
 		idx++
+	}
+	// Render newline pilcrow at end of line
+	if showWS && screenX < textWidth {
+		pilcrowStyle := tcell.StyleDefault.Foreground(e.whitespaceFg).Background(curLineBg)
+		e.screen.SetContent(lineNumWidth+screenX, y, '\u00B6', nil, pilcrowStyle)
+		screenX++
 	}
 	// Fill remaining line area with current line bg
 	if curLineBg != tcell.ColorDefault {

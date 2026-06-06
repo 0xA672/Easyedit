@@ -15,6 +15,7 @@ search_match_bg = "yellow"
 bracket_match = "green"
 selection_bg = "navy"
 cursor_line_bg = "#2a2a2a"    # 当前行背景高亮
+whitespace_fg = "#555555"      # 空白字符颜色（空格/制表符/换行符）
 
 [keys]
 # 键位绑定（暂不支持自定义，预留字段）
@@ -43,3 +44,4 @@ undo_limit = 100     # 撤销步数上限
 tab_to_spaces = true # Tab 转空格
 vim_mode = false     # 启用 Vim 风格模式切换（NORMAL/INSERT/VISUAL）
 scroll_margin = 3    # 光标上下保留行数（滚动时保持光标不贴近边缘）
+show_whitespace = false # 显示空白字符（空格·、制表符→、换行¶）
