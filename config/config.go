@@ -31,44 +31,44 @@ type KeyBindings struct {
 // Theme defines color theme palette.
 // Each field uses tcell color names (e.g., "aqua", "green", "#ff00ff") or "default".
 type Theme struct {
-	DefaultFg      string `toml:"default_fg"`       // Default foreground color
-	DefaultBg      string `toml:"default_bg"`       // Default background color
-	LineNumFg      string `toml:"linenum_fg"`       // Line number foreground
-	LineNumBg      string `toml:"linenum_bg"`       // Line number background
-	LineNumCurFg   string `toml:"linenum_cur_fg"`   // Current line number foreground
-	StatusBarFg    string `toml:"statusbar_fg"`     // Status bar foreground
-	StatusBarBg    string `toml:"statusbar_bg"`     // Status bar background
-	SearchMatchBg  string `toml:"search_match_bg"`  // Search match highlight background
-	BracketMatch   string `toml:"bracket_match"`    // Bracket match highlight foreground
-	SelectionBg    string `toml:"selection_bg"`     // Selection background
-	CursorLineBg   string `toml:"cursor_line_bg"`   // Current line background highlight
+	DefaultFg     string `toml:"default_fg"`      // Default foreground color
+	DefaultBg     string `toml:"default_bg"`      // Default background color
+	LineNumFg     string `toml:"linenum_fg"`      // Line number foreground
+	LineNumBg     string `toml:"linenum_bg"`      // Line number background
+	LineNumCurFg  string `toml:"linenum_cur_fg"`  // Current line number foreground
+	StatusBarFg   string `toml:"statusbar_fg"`    // Status bar foreground
+	StatusBarBg   string `toml:"statusbar_bg"`    // Status bar background
+	SearchMatchBg string `toml:"search_match_bg"` // Search match highlight background
+	BracketMatch  string `toml:"bracket_match"`   // Bracket match highlight foreground
+	SelectionBg   string `toml:"selection_bg"`    // Selection background
+	CursorLineBg  string `toml:"cursor_line_bg"`  // Current line background highlight
 }
 
 // Config is the editor configuration struct.
 type Config struct {
 	Theme        Theme       `toml:"theme"`
 	Keys         KeyBindings `toml:"keys"`
-	TabWidth     int         `toml:"tab_width"`      // Indent width, default 4
-	ShowLineNum  bool        `toml:"show_line_num"`  // Show line numbers, default true
-	ShowMode     bool        `toml:"show_mode"`      // Show mode indicator in status bar, default true
-	Backup       bool        `toml:"backup"`         // Create .bak backup, default true
-	SoftWrap     bool        `toml:"soft_wrap"`      // Enable soft wrap, default true
-	AutoIndent   bool        `toml:"auto_indent"`    // Enable auto-indent, default true
-	UndoLimit    int         `toml:"undo_limit"`     // Undo step limit, default 100
-	TabToSpaces  bool        `toml:"tab_to_spaces"`  // Convert tab to spaces, default true
-	VimMode      bool        `toml:"vim_mode"`       // Enable Vim-style modes, default false (legacy behavior)
-	ScrollMargin int         `toml:"scroll_margin"`  // Lines to keep above/below cursor, default 3
+	TabWidth     int         `toml:"tab_width"`     // Indent width, default 4
+	ShowLineNum  bool        `toml:"show_line_num"` // Show line numbers, default true
+	ShowMode     bool        `toml:"show_mode"`     // Show mode indicator in status bar, default true
+	Backup       bool        `toml:"backup"`        // Create .bak backup, default true
+	SoftWrap     bool        `toml:"soft_wrap"`     // Enable soft wrap, default true
+	AutoIndent   bool        `toml:"auto_indent"`   // Enable auto-indent, default true
+	UndoLimit    int         `toml:"undo_limit"`    // Undo step limit, default 100
+	TabToSpaces  bool        `toml:"tab_to_spaces"` // Convert tab to spaces, default true
+	VimMode      bool        `toml:"vim_mode"`      // Enable Vim-style modes, default false (legacy behavior)
+	ScrollMargin int         `toml:"scroll_margin"` // Lines to keep above/below cursor, default 3
 }
 
 // defaultConfig returns the default configuration.
 func defaultConfig() Config {
 	return Config{
-		TabWidth:    4,
-		ShowLineNum: true,
-		ShowMode:    true,
-		Backup:      true,
-		SoftWrap:    true,
-		AutoIndent:  true,
+		TabWidth:     4,
+		ShowLineNum:  true,
+		ShowMode:     true,
+		Backup:       true,
+		SoftWrap:     true,
+		AutoIndent:   true,
 		UndoLimit:    100,
 		TabToSpaces:  true,
 		VimMode:      false, // Default to legacy behavior for backward compatibility
