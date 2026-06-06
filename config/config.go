@@ -40,39 +40,39 @@ type Theme struct {
 	StatusBarBg   string `toml:"statusbar_bg"`    // Status bar background
 	SearchMatchBg string `toml:"search_match_bg"` // Search match highlight background
 	BracketMatch  string `toml:"bracket_match"`   // Bracket match highlight foreground
-	SelectionBg   string `toml:"selection_bg"`     // Selection background
-	CursorLineBg  string `toml:"cursor_line_bg"`   // Current line background highlight
-	WhitespaceFg  string `toml:"whitespace_fg"`    // Whitespace glyph foreground color
+	SelectionBg   string `toml:"selection_bg"`    // Selection background
+	CursorLineBg  string `toml:"cursor_line_bg"`  // Current line background highlight
+	WhitespaceFg  string `toml:"whitespace_fg"`   // Whitespace glyph foreground color
 }
 
 // Config is the editor configuration struct.
 type Config struct {
-	Theme        Theme       `toml:"theme"`
-	Keys         KeyBindings `toml:"keys"`
-	TabWidth     int         `toml:"tab_width"`     // Indent width, default 4
-	ShowLineNum  bool        `toml:"show_line_num"` // Show line numbers, default true
-	ShowMode     bool        `toml:"show_mode"`     // Show mode indicator in status bar, default true
-	Backup       bool        `toml:"backup"`        // Create .bak backup, default true
-	SoftWrap     bool        `toml:"soft_wrap"`     // Enable soft wrap, default true
-	AutoIndent   bool        `toml:"auto_indent"`   // Enable auto-indent, default true
-	UndoLimit    int         `toml:"undo_limit"`    // Undo step limit, default 100
-	TabToSpaces  bool        `toml:"tab_to_spaces"` // Convert tab to spaces, default true
-	VimMode        bool `toml:"vim_mode"`          // Enable Vim-style modes, default false (legacy behavior)
-	ScrollMargin   int  `toml:"scroll_margin"`     // Lines to keep above/below cursor, default 3
-	ShowWhitespace bool `toml:"show_whitespace"`   // Show whitespace characters (space, tab, newline), default false
+	Theme          Theme       `toml:"theme"`
+	Keys           KeyBindings `toml:"keys"`
+	TabWidth       int         `toml:"tab_width"`       // Indent width, default 4
+	ShowLineNum    bool        `toml:"show_line_num"`   // Show line numbers, default true
+	ShowMode       bool        `toml:"show_mode"`       // Show mode indicator in status bar, default true
+	Backup         bool        `toml:"backup"`          // Create .bak backup, default true
+	SoftWrap       bool        `toml:"soft_wrap"`       // Enable soft wrap, default true
+	AutoIndent     bool        `toml:"auto_indent"`     // Enable auto-indent, default true
+	UndoLimit      int         `toml:"undo_limit"`      // Undo step limit, default 100
+	TabToSpaces    bool        `toml:"tab_to_spaces"`   // Convert tab to spaces, default true
+	VimMode        bool        `toml:"vim_mode"`        // Enable Vim-style modes, default false (legacy behavior)
+	ScrollMargin   int         `toml:"scroll_margin"`   // Lines to keep above/below cursor, default 3
+	ShowWhitespace bool        `toml:"show_whitespace"` // Show whitespace characters (space, tab, newline), default false
 }
 
 // defaultConfig returns the default configuration.
 func defaultConfig() Config {
 	return Config{
-		TabWidth:     4,
-		ShowLineNum:  true,
-		ShowMode:     true,
-		Backup:       true,
-		SoftWrap:     true,
-		AutoIndent:   true,
-		UndoLimit:    100,
-		TabToSpaces:  true,
+		TabWidth:       4,
+		ShowLineNum:    true,
+		ShowMode:       true,
+		Backup:         true,
+		SoftWrap:       true,
+		AutoIndent:     true,
+		UndoLimit:      100,
+		TabToSpaces:    true,
 		VimMode:        false, // Default to legacy behavior for backward compatibility
 		ScrollMargin:   3,
 		ShowWhitespace: false,
