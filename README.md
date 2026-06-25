@@ -135,6 +135,7 @@ Every AI model that contributed to this project:
 | **GPT-4.1** | OpenAI | Architecture design |
 | **Claude 4.7** | Anthropic | UI enhancements, Vix language support, Stream mode, multi‑language docs |
 | **Doubao** | ByteDance | Documentation annotations |
+| **Trae AI** | Trae | Code contributions, feature enhancements |
 
 ---
 
