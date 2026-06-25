@@ -184,6 +184,10 @@ func parseScript(script string) []string {
 // applyRules 将解析后的编辑规则应用到输入内容上，支持字符串替换、匹配行删除等sed风格的编辑操作。
 func applyRules(content string, rules []string) string {
 	result := content
+	// Maximum total replacements to prevent DoS
+	const maxReplacements = 1000000
+	totalReplacements := 0
+
 	for _, rule := range rules {
 		// Parse sed-like syntax: s/pattern/replacement/flags
 		if strings.HasPrefix(rule, "s/") {
@@ -195,16 +199,58 @@ func applyRules(content string, rules []string) string {
 				if len(parts) == 3 {
 					flags = parts[2]
 				}
+
+				// Validate pattern is not empty
+				if pattern == "" {
+					continue
+				}
+
+				// Safety check: if replacement contains pattern and global flag is used,
+				// this could cause exponential growth - skip global replacement
+				if strings.Contains(flags, "g") && strings.Contains(replacement, pattern) {
+					// Fall back to single replacement to prevent issues
+					flags = strings.ReplaceAll(flags, "g", "")
+					if flags == "" {
+						replacement = strings.Replace(result, pattern, replacement, 1)
+						totalReplacements++
+						if totalReplacements > maxReplacements {
+							break
+						}
+						result = replacement
+						continue
+					}
+				}
+
+				// Limit pattern and replacement length to prevent memory issues
+				if len(pattern) > 10000 || len(replacement) > 10000 {
+					continue
+				}
+
 				// Simple string replacement (not full regex for safety)
 				if strings.Contains(flags, "g") {
-					result = strings.ReplaceAll(result, pattern, replacement)
+					replaced := strings.ReplaceAll(result, pattern, replacement)
+					// Count actual replacements to track against limit
+					count := strings.Count(result, pattern)
+					totalReplacements += count
+					if totalReplacements > maxReplacements {
+						break
+					}
+					result = replaced
 				} else {
+					if totalReplacements >= maxReplacements {
+						break
+					}
 					result = strings.Replace(result, pattern, replacement, 1)
+					totalReplacements++
 				}
 			}
 		} else if strings.HasPrefix(rule, "/") && strings.HasSuffix(rule, "/d") && len(rule) > 2 {
 			// Delete lines matching pattern: /pattern/d
 			pattern := rule[1 : len(rule)-2]
+			// Validate pattern is not empty and not too long
+			if pattern == "" || len(pattern) > 10000 {
+				continue
+			}
 			lines := strings.Split(result, "\n")
 			var filtered []string
 			for _, line := range lines {
