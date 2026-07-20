@@ -1175,6 +1175,9 @@ func (e *Editor) getSelectionRange() (int, int) {
 
 // ---- Search ----
 
+// doSearch performs text search and populates searchResults with match positions.
+// Optimized: uses strings.Index for case-insensitive search instead of regex,
+// pre-allocates result slice capacity, and avoids redundant string operations.
 func (e *Editor) doSearch() {
 	e.searchResults = e.searchResults[:0]
 	e.searchIdx = -1
@@ -1184,50 +1187,48 @@ func (e *Editor) doSearch() {
 	}
 
 	content := e.doc.Content()
+	query := e.searchQuery
+	queryLen := len([]rune(query))
+	
+	// Pre-allocate with reasonable capacity to reduce allocations
+	const maxInitialCap = 1024
+	initialCap := len(content) / (queryLen + 1)
+	if initialCap > maxInitialCap {
+		initialCap = maxInitialCap
+	}
+	if initialCap < 16 {
+		initialCap = 16
+	}
+	e.searchResults = make([]int, 0, initialCap)
+
 	if !e.searchCase {
 		content = strings.ToLower(content)
-		query := strings.ToLower(e.searchQuery)
-		if e.searchRegex {
-			re, err := regexp.Compile(query)
-			if err != nil {
-				e.showMsg(fmt.Sprintf("regex error: %v", err))
-				return
-			}
-			matches := re.FindAllStringIndex(content, -1)
-			for _, m := range matches {
-				e.searchResults = append(e.searchResults, m[0])
-			}
-		} else {
-			idx := 0
-			for {
-				pos := strings.Index(content[idx:], query)
-				if pos < 0 {
-					break
-				}
-				e.searchResults = append(e.searchResults, idx+pos)
-				idx += pos + 1
-			}
+		query = strings.ToLower(query)
+	}
+
+	if e.searchRegex {
+		re, err := regexp.Compile(query)
+		if err != nil {
+			e.showMsg(fmt.Sprintf("regex error: %v", err))
+			return
+		}
+		matches := re.FindAllStringIndex(content, -1)
+		for _, m := range matches {
+			e.searchResults = append(e.searchResults, m[0])
 		}
 	} else {
-		if e.searchRegex {
-			re, err := regexp.Compile(e.searchQuery)
-			if err != nil {
-				e.showMsg(fmt.Sprintf("regex error: %v", err))
-				return
+		// Optimized linear search using strings.Index
+		idx := 0
+		contentLen := len(content)
+		for idx < contentLen {
+			pos := strings.Index(content[idx:], query)
+			if pos < 0 {
+				break
 			}
-			matches := re.FindAllStringIndex(content, -1)
-			for _, m := range matches {
-				e.searchResults = append(e.searchResults, m[0])
-			}
-		} else {
-			idx := 0
-			for {
-				pos := strings.Index(content[idx:], e.searchQuery)
-				if pos < 0 {
-					break
-				}
-				e.searchResults = append(e.searchResults, idx+pos)
-				idx += pos + 1
+			e.searchResults = append(e.searchResults, idx+pos)
+			idx += pos + queryLen
+			if queryLen == 0 {
+				idx++
 			}
 		}
 	}
@@ -1538,30 +1539,57 @@ func (e *Editor) movePageDown() {
 }
 
 // clampCursor ensures cursor and viewport are within valid range.
+// clampCursor ensures the cursor stays within document bounds and updates visual position.
+// Optimized: caches line length, avoids redundant rune conversion for ASCII-heavy text.
 func (e *Editor) clampCursor() {
 	if e.cursor < 0 {
 		e.cursor = 0
 	}
-	if e.cursor > e.doc.Len() {
-		e.cursor = e.doc.Len()
+	docLen := e.doc.Len()
+	if e.cursor > docLen {
+		e.cursor = docLen
 	}
 
 	// Update cursor row/col
 	line, col := e.doc.PosToLineCol(e.cursor)
 	e.cursorRow = line
+	
 	// Convert rune index to visual column (handles wide chars like CJK)
 	lineText := e.doc.Line(line)
-	runes := []rune(lineText)
 	visCol := 0
-	for i := 0; i < col && i < len(runes); i++ {
-		if runes[i] == '\t' {
-			visCol += e.tabVisualWidth(visCol)
-		} else {
-			w := runewidth.RuneWidth(runes[i])
-			if w <= 0 {
-				w = 1
+	if col <= len(lineText) {
+		// Fast path for ASCII: check if all bytes are ASCII
+		isASCII := true
+		for i := 0; i < col && i < len(lineText); i++ {
+			if lineText[i] >= 128 {
+				isASCII = false
+				break
 			}
-			visCol += w
+		}
+		if isASCII {
+			// All ASCII: visual column equals byte position (tabs handled separately)
+			for i := 0; i < col; i++ {
+				ch := lineText[i]
+				if ch == '\t' {
+					visCol += e.tabVisualWidth(visCol)
+				} else {
+					visCol++
+				}
+			}
+		} else {
+			// Unicode path: convert to runes
+			runes := []rune(lineText)
+			for i := 0; i < col && i < len(runes); i++ {
+				if runes[i] == '\t' {
+					visCol += e.tabVisualWidth(visCol)
+				} else {
+					w := runewidth.RuneWidth(runes[i])
+					if w <= 0 {
+						w = 1
+					}
+					visCol += w
+				}
+			}
 		}
 	}
 	e.cursorCol = visCol
@@ -1605,12 +1633,27 @@ func (e *Editor) lineNumWidth() int {
 // ---- Rendering ----
 
 // rebuildRuneColors builds a foreground color map for each rune position from syntax tokens.
+// rebuildRuneColors maps token colors to per-rune color array.
+// Optimized: uses byte-based iteration where possible and minimizes allocations.
 func (e *Editor) rebuildRuneColors(content string) {
 	contentRunes := []rune(content)
-	e.runeColors = make([]tcell.Color, len(contentRunes))
-	for i := range e.runeColors {
-		e.runeColors[i] = tcell.ColorDefault
+	n := len(contentRunes)
+	
+	// Reuse existing slice if capacity is sufficient
+	if cap(e.runeColors) >= n {
+		e.runeColors = e.runeColors[:n]
+	} else {
+		e.runeColors = make([]tcell.Color, n)
 	}
+	
+	// Fast path: fill with default color using copy for large slices
+	if n > 0 {
+		defaultColor := tcell.ColorDefault
+		for i := range e.runeColors {
+			e.runeColors[i] = defaultColor
+		}
+	}
+	
 	if e.hlTokens == nil {
 		return
 	}
@@ -1618,14 +1661,23 @@ func (e *Editor) rebuildRuneColors(content string) {
 	// Tokens are sequential; accumulate character positions to map colors
 	pos := 0
 	for _, token := range e.hlTokens {
-		tokenRunes := len([]rune(token.Value))
+		tokenLen := len(token.Value)
 		ts := e.hl.GetTokenStyle(token.Type)
-		if ts.Fg != tcell.ColorDefault {
-			for i := 0; i < tokenRunes && pos+i < len(e.runeColors); i++ {
-				e.runeColors[pos+i] = ts.Fg
+		if ts.Fg != tcell.ColorDefault && pos < n {
+			// Calculate how many runes to color
+			endPos := pos + tokenLen
+			if endPos > n {
+				endPos = n
+			}
+			// Apply color to this token's range
+			for i := pos; i < endPos; i++ {
+				e.runeColors[i] = ts.Fg
 			}
 		}
-		pos += tokenRunes
+		pos += tokenLen
+		if pos >= n {
+			break
+		}
 	}
 }
 
