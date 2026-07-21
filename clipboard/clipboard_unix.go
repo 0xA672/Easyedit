@@ -7,6 +7,44 @@ import (
 	"strings"
 )
 
+// getCopyCommand returns a command to copy text to clipboard.
+// Uses hardcoded trusted binaries to prevent command injection.
+func getCopyCommand() *exec.Cmd {
+	switch {
+	case hasCmd("pbcopy"):
+		return exec.Command("pbcopy")
+	case hasCmd("wl-copy"):
+		return exec.Command("wl-copy")
+	case hasCmd("xclip"):
+		return exec.Command("xclip", "-in", "-selection", "clipboard")
+	case hasCmd("xsel"):
+		return exec.Command("xsel", "--input", "--clipboard")
+	case hasCmd("termux-clipboard-set"):
+		return exec.Command("termux-clipboard-set")
+	}
+	Unsupported = true
+	return nil
+}
+
+// getPasteCommand returns a command to paste text from clipboard.
+// Uses hardcoded trusted binaries to prevent command injection.
+func getPasteCommand() *exec.Cmd {
+	switch {
+	case hasCmd("pbpaste"):
+		return exec.Command("pbpaste")
+	case hasCmd("wl-paste"):
+		return exec.Command("wl-paste", "--no-newline")
+	case hasCmd("xclip"):
+		return exec.Command("xclip", "-out", "-selection", "clipboard")
+	case hasCmd("xsel"):
+		return exec.Command("xsel", "--output", "--clipboard")
+	case hasCmd("termux-clipboard-get"):
+		return exec.Command("termux-clipboard-get")
+	}
+	Unsupported = true
+	return nil
+}
+
 func readAll() (string, error) {
 	if Unsupported {
 		return "", nil
@@ -44,40 +82,6 @@ func writeAll(text string) error {
 		return err
 	}
 	return cmd.Wait()
-}
-
-func getPasteCommand() *exec.Cmd {
-	switch {
-	case hasCmd("pbpaste"):
-		return exec.Command("pbpaste")
-	case hasCmd("wl-paste"):
-		return exec.Command("wl-paste", "--no-newline")
-	case hasCmd("xclip"):
-		return exec.Command("xclip", "-out", "-selection", "clipboard")
-	case hasCmd("xsel"):
-		return exec.Command("xsel", "--output", "--clipboard")
-	case hasCmd("termux-clipboard-get"):
-		return exec.Command("termux-clipboard-get")
-	}
-	Unsupported = true
-	return nil
-}
-
-func getCopyCommand() *exec.Cmd {
-	switch {
-	case hasCmd("pbcopy"):
-		return exec.Command("pbcopy")
-	case hasCmd("wl-copy"):
-		return exec.Command("wl-copy")
-	case hasCmd("xclip"):
-		return exec.Command("xclip", "-in", "-selection", "clipboard")
-	case hasCmd("xsel"):
-		return exec.Command("xsel", "--input", "--clipboard")
-	case hasCmd("termux-clipboard-set"):
-		return exec.Command("termux-clipboard-set")
-	}
-	Unsupported = true
-	return nil
 }
 
 func hasCmd(name string) bool {

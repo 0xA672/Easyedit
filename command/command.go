@@ -21,6 +21,7 @@ package command
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -594,11 +595,18 @@ func (ex *Executor) Execute(cmd *Command) (shouldQuit bool, err error) {
 		if path == "" {
 			return false, &ParseError{"edit: filename required"}
 		}
-		if err := ex.OpenFile(path); err != nil {
+		// Security: Validate path to prevent path traversal attacks
+		// Only allow relative paths within current directory or absolute paths
+		cleanPath := filepath.Clean(path)
+		// Reject paths that try to escape current directory
+		if strings.HasPrefix(cleanPath, "..") {
+			return false, &ParseError{"edit: path traversal not allowed"}
+		}
+		if err := ex.OpenFile(cleanPath); err != nil {
 			return false, err
 		}
 		if ex.ShowMsg != nil {
-			ex.ShowMsg(fmt.Sprintf("opened %s", path))
+			ex.ShowMsg(fmt.Sprintf("opened %s", cleanPath))
 		}
 
 	case CmdGoto:
