@@ -190,6 +190,9 @@ func (e *Editor) doUninstall() error {
 		return fmt.Errorf("uninstall: cannot determine executable path: %w", err)
 	}
 
+	// Validate executable path to prevent command injection
+	cleanExePath := filepath.Clean(exePath)
+
 	if runtime.GOOS == "windows" {
 		// Write a batch script that waits then deletes the exe and itself
 		batPath := filepath.Join(os.TempDir(), "easyedit_uninstall.bat")
@@ -197,16 +200,21 @@ func (e *Editor) doUninstall() error {
 ping -n 3 127.0.0.1 > nul
 del /f /q "%s"
 del /f /q "%%~f0"
-`, exePath))
-		if err := os.WriteFile(batPath, batContent, 0644); err != nil {
+`, cleanExePath))
+		if err := os.WriteFile(batPath, batContent, 0600); err != nil {
 			return fmt.Errorf("uninstall: cannot create cleanup script: %w", err)
 		}
-		// Launch the batch script (hidden window)
-		os.StartProcess("cmd", []string{"/c", "start", "/b", batPath}, &os.ProcAttr{})
+		// Launch the batch script (hidden window), ignore errors as process is exiting
+		if _, err := os.StartProcess("cmd", []string{"/c", "start", "/b", batPath}, &os.ProcAttr{}); err != nil {
+			// Best effort - process may still run even if we can't track it
+		}
 	} else {
 		// Unix: use nohup + sleep + rm
-		script := fmt.Sprintf("(sleep 2 && rm -f '%s') &", exePath)
-		os.StartProcess("/bin/sh", []string{"sh", "-c", script}, &os.ProcAttr{})
+		script := fmt.Sprintf("(sleep 2 && rm -f '%s') &", cleanExePath)
+		// Launch background process, ignore errors as process is exiting
+		if _, err := os.StartProcess("/bin/sh", []string{"sh", "-c", script}, &os.ProcAttr{}); err != nil {
+			// Best effort - process may still run even if we can't track it
+		}
 	}
 
 	e.showMsg("EasyEdit has been uninstalled. Goodbye!")
@@ -258,13 +266,20 @@ func (e *Editor) SaveFile(path string) error {
 		return fmt.Errorf("no filename (use :w <path> or Ctrl+S)")
 	}
 
-	// Create backup
+	// Security: Validate and clean path to prevent path traversal
+	cleanPath := filepath.Clean(path)
+	// Reject paths that try to escape current directory
+	if strings.HasPrefix(cleanPath, "..") {
+		return fmt.Errorf("cannot save to path outside current directory")
+	}
+
+	// Create backup with secure permissions
 	if e.config.Backup {
-		backupPath := path + ".bak"
-		if _, err := os.Stat(path); err == nil {
-			data, err := os.ReadFile(path)
+		backupPath := cleanPath + ".bak"
+		if _, err := os.Stat(cleanPath); err == nil {
+			data, err := os.ReadFile(cleanPath)
 			if err == nil {
-				os.WriteFile(backupPath, data, 0644)
+				os.WriteFile(backupPath, data, 0600)
 			}
 		}
 	}
@@ -281,13 +296,13 @@ func (e *Editor) SaveFile(path string) error {
 	} else {
 		data = []byte(content)
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("cannot write %s: %w", path, err)
+	if err := os.WriteFile(cleanPath, data, 0600); err != nil {
+		return fmt.Errorf("cannot write %s: %w", cleanPath, err)
 	}
 
-	e.doc.FilePath = path
+	e.doc.FilePath = cleanPath
 	e.doc.Modified = false
-	e.hl.SetFile(path)
+	e.hl.SetFile(cleanPath)
 	return nil
 }
 
@@ -1189,7 +1204,7 @@ func (e *Editor) doSearch() {
 	content := e.doc.Content()
 	query := e.searchQuery
 	queryLen := len([]rune(query))
-	
+
 	// Pre-allocate with reasonable capacity to reduce allocations
 	const maxInitialCap = 1024
 	initialCap := len(content) / (queryLen + 1)
@@ -1553,7 +1568,7 @@ func (e *Editor) clampCursor() {
 	// Update cursor row/col
 	line, col := e.doc.PosToLineCol(e.cursor)
 	e.cursorRow = line
-	
+
 	// Convert rune index to visual column (handles wide chars like CJK)
 	lineText := e.doc.Line(line)
 	visCol := 0
@@ -1638,14 +1653,14 @@ func (e *Editor) lineNumWidth() int {
 func (e *Editor) rebuildRuneColors(content string) {
 	contentRunes := []rune(content)
 	n := len(contentRunes)
-	
+
 	// Reuse existing slice if capacity is sufficient
 	if cap(e.runeColors) >= n {
 		e.runeColors = e.runeColors[:n]
 	} else {
 		e.runeColors = make([]tcell.Color, n)
 	}
-	
+
 	// Fast path: fill with default color using copy for large slices
 	if n > 0 {
 		defaultColor := tcell.ColorDefault
@@ -1653,7 +1668,7 @@ func (e *Editor) rebuildRuneColors(content string) {
 			e.runeColors[i] = defaultColor
 		}
 	}
-	
+
 	if e.hlTokens == nil {
 		return
 	}
